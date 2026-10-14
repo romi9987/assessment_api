@@ -1,12 +1,13 @@
 from datetime import date
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 
 class PatientCreate(BaseModel):
     first_name: str = Field(min_length=3)
     last_name: str = Field(min_length=3)
     birthdate: date
+    email: EmailStr | None = None
 
     @field_validator("first_name", "last_name", mode="before")
     @classmethod
@@ -32,6 +33,7 @@ class PatientUpdate(BaseModel):
     first_name: str | None = Field(default=None, min_length=3)
     last_name: str | None = Field(default=None, min_length=3)
     birthdate: date | None = None
+    email: EmailStr | None = None
 
     @field_validator("first_name", "last_name", mode="before")
     @classmethod
