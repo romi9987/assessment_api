@@ -1,0 +1,28 @@
+# A few details:
+# - image uses the official PostgreSQL image.
+# - environment initializes the database and user on first startup.
+# - ports allows your FastAPI application on macOS to connect using localhost:5432. Binding to 127.0.0.1 avoids exposing the port on all network interfaces.
+# - volumes keeps your database data even if you remove the container.
+# - healthcheck checks whether PostgreSQL is ready to accept connections.
+# The password is a development-only example. Later we'll move it into a local .env file excluded from Git.
+
+services:
+  db:
+    image: postgres:17
+    container_name: assessment-postgres
+    environment:
+      POSTGRES_USER: assessment_user
+      POSTGRES_PASSWORD: assessment_dev_password
+      POSTGRES_DB: assessment_db
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - assessment_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U assessment_user -d assessment_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  assessment_pgdata:
