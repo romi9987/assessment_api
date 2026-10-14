@@ -1,12 +1,14 @@
 from fastapi import FastAPI
 
-from database import Base, engine
+# from database import Base, engine
 from routers import patients
 
 app = FastAPI()
 app.include_router(patients.router)
 
-Base.metadata.create_all(bind=engine)
+# Once you've verified the baseline with alembic, you can remove this line from main.py
+# An important consequence: when setting up your project with a new, empty database, you'll need to run alembic upgrade head before using the API.
+# Base.metadata.create_all(bind=engine)
 
 @app.get("/")
 def main():
