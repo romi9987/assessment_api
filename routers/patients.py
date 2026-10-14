@@ -15,7 +15,8 @@ def create_patient(patient: PatientCreate, session: Annotated[Session, Depends(g
     patient_db = PatientDB(
         first_name = patient.first_name,
         last_name = patient.last_name,
-        birthdate = patient.birthdate
+        birthdate = patient.birthdate,
+        email = patient.email
     )
     session.add(patient_db)
     session.commit()
@@ -60,6 +61,7 @@ def replace_patient(patient_id: int,
     patient.first_name = patient_create.first_name
     patient.last_name = patient_create.last_name
     patient.birthdate = patient_create.birthdate
+    patient.email = patient_create.email
     session.commit()
     session.refresh(patient)
     return patient

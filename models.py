@@ -12,3 +12,4 @@ class PatientDB(Base):
     first_name: Mapped[str] = mapped_column()
     last_name: Mapped[str] = mapped_column()
     birthdate: Mapped[date] = mapped_column()
+    email: Mapped[str | None] = mapped_column(nullable=True)
