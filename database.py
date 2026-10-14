@@ -1,9 +1,14 @@
+import os
+
+from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, Session
 
+load_dotenv()
+
 # DATABASE_URL = "sqlite:///./assessment.db"
 # postgresql+psycopg://username:password@host:port/database
-DATABASE_URL = "postgresql+psycopg://assessment_user:assessment_dev_password@localhost:5432/assessment_db"
+DATABASE_URL = os.environ["DATABASE_URL"]
 engine = create_engine(DATABASE_URL)
 
 class Base(DeclarativeBase):

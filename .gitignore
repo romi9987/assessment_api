@@ -12,3 +12,8 @@ wheels/
 
 # DBs
 *.db
+
+# Env variables
+.env
+.env.*
+!.env.example
