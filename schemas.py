@@ -55,3 +55,18 @@ class PatientUpdate(BaseModel):
         if value >= date.today():
             raise ValueError("Value must be in the past.")
         return value
+
+class AssessmentCreate(BaseModel):
+    assessment_date: date = Field()
+    score: int = Field(ge=0, le=100)
+
+    @field_validator("assessment_date")
+    @classmethod
+    def validate_assessment_date(cls, value):
+        if value > date.today():
+            raise ValueError("Value cannot be in the future.")
+        return value
+
+class AssessmentResponse(AssessmentCreate):
+    id: int
+    patient_id: int

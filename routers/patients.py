@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from database import get_session
 from models import PatientDB
 from schemas import PatientCreate, PatientResponse, PatientUpdate
+from utils import find_patient
 
 router = APIRouter(prefix="/patients", tags=["patients"])
 
@@ -29,17 +30,6 @@ def list_patients(session: Annotated[Session, Depends(get_session)]):
     result = session.execute(statement)
     patients = result.scalars().all()
     return patients
-
-def find_patient(patient_id: int, session: Session):
-    statement = select(PatientDB).where(PatientDB.id == patient_id)
-    result = session.execute(statement)
-    patient = result.scalar()
-    if patient is None:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Patient of id {patient_id} not found."
-        )
-    return patient
 
 @router.get("/{patient_id}", response_model=PatientResponse)
 def get_patient(patient_id: int, session: Annotated[Session, Depends(get_session)]):
