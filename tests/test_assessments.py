@@ -1,3 +1,6 @@
+from sqlalchemy import select
+from models import AssessmentDB
+
 def test_create_assessment(client):
     # 1. Create a patient using client.post()
     patient_response = client.post(
@@ -204,3 +207,54 @@ def test_assessment_ordering(client):
         ("2026-02-20", 70),
         ("2026-01-10", 90),
     ]
+
+def test_cascade_delete(client, db_session):
+    """
+    This is a good example of when testing only through HTTP endpoints isn't sufficient.
+    """
+    # 1. Create a patient and two assessments.
+    patient_response = client.post(
+        "/patients",
+        json={
+            "first_name": "Anna",
+            "last_name": "Smith",
+            "birthdate": "1982-12-10"
+        }
+    )
+    assert patient_response.status_code == 201
+    patient_id = patient_response.json()["id"]
+
+    first_assessment = client.post(
+        f"/patients/{patient_id}/assessments",
+        json={
+            "assessment_date": "2026-03-15",
+            "score": 40
+        }
+    )
+    assert first_assessment.status_code == 201
+
+    second_assessment = client.post(
+        f"/patients/{patient_id}/assessments",
+        json={
+            "assessment_date": "2026-02-20",
+            "score": 70
+        }
+    )
+    assert second_assessment.status_code == 201
+
+    # 2. Delete the patient using DELETE /patients/{patient_id}.
+    delete_response = client.delete(
+                            f"/patients/{patient_id}"
+                        )
+    assert delete_response.status_code == 200
+
+    # 3. Verify GET /patients/{patient_id} returns 404.
+    patient_deleted = client.get(
+        f"/patients/{patient_id}"
+    )
+    assert patient_deleted.status_code == 404
+
+    # 4. Verify that the associated assessments have also been deleted from PostgreSQL. 
+    statement = select(AssessmentDB).where(AssessmentDB.patient_id == patient_id)
+    remaining_assessments = db_session.execute(statement).scalars().all()
+    assert remaining_assessments == []
