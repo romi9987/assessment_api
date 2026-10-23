@@ -417,3 +417,135 @@ def test_patch_patient_remove_email(client):
         "email": None,
     }
     assert patient_changed.json() == expected_patient
+
+def test_put_patient(client):
+    # 1. Create a patient:
+    patient_response = client.post(
+        "/patients",
+        json={     
+                "first_name": "Anna",
+                "last_name": "Smith",
+                "birthdate": "1982-12-10",
+                "email": "anna@example.com"
+            }
+    )
+    assert patient_response.status_code == 201
+    patient_id = patient_response.json()["id"]
+
+    # 2. Send PUT with:
+    put_response = client.put(
+        f"/patients/{patient_id}",
+        json={
+           "first_name": "Anna",
+            "last_name": "Johnson",
+            "birthdate": "1982-12-10",
+            "email": "anna.johnson@example.com" 
+        }
+    )
+
+    # 3. Verify HTTP 200.
+    assert put_response.status_code == 200
+
+    # 4. Verify the PUT response contains
+    #    the updated patient.
+    expected_patient = {
+        "id": patient_id,
+        "first_name": "Anna",
+        "last_name": "Johnson",
+        "birthdate": "1982-12-10",
+        "email": "anna.johnson@example.com"
+    }
+    assert put_response.json() == expected_patient
+
+    # 5. GET the patient again.
+    patient_changed = client.get(
+        f"/patients/{patient_id}"
+    )
+    assert patient_changed.status_code == 200
+
+    # 6. Verify the complete updated data.
+    assert patient_changed.json() == expected_patient
+
+def test_put_patient_missing_required_fields(client):
+    # 1. Create a patient.
+    patient_response = client.post(
+        "/patients",
+        json={     
+                "first_name": "Anna",
+                "last_name": "Smith",
+                "birthdate": "1982-12-10",
+                "email": "anna@example.com"
+            }
+    )
+    assert patient_response.status_code == 201
+    patient_id = patient_response.json()["id"]
+
+    # 2. Send PUT containing only last_name
+    put_response = client.put(
+        f"/patients/{patient_id}",
+        json={
+            "last_name": "Johnson",
+        }
+    )
+
+    # 3. Verify HTTP 422.
+    assert put_response.status_code == 422
+
+    # 4. GET the patient again.
+    patient_unchanged = client.get(
+        f"/patients/{patient_id}"
+    )
+    assert patient_unchanged.status_code == 200
+
+    # 5. Verify the original patient data remains unchanged.
+    expected_patient={
+            "id": patient_id,     
+            "first_name": "Anna",
+            "last_name": "Smith",
+            "birthdate": "1982-12-10",
+            "email": "anna@example.com"
+        }
+    assert patient_unchanged.json() == expected_patient
+
+def test_put_patient_omitted_email(client):
+    # 1. Create a patient with an email address.
+    patient_response = client.post(
+        "/patients",
+        json={     
+                "first_name": "Anna",
+                "last_name": "Smith",
+                "birthdate": "1982-12-10",
+                "email": "anna@example.com"
+            }
+    )
+    assert patient_response.status_code == 201
+    patient_id = patient_response.json()["id"]
+
+    # 2. Send PUT with all required fields, but omit email.
+    put_response = client.put(
+        f"/patients/{patient_id}",
+        json={
+            "first_name": "Anna",
+            "last_name": "Johnson",
+            "birthdate": "1982-12-10"
+        }
+    )
+
+    # 3. Verify HTTP 200.
+    assert put_response.status_code == 200
+
+    # 4. GET the patient again.
+    patient_changed = client.get(
+        f"/patients/{patient_id}"
+    )
+    assert patient_changed.status_code == 200
+
+    # 5. Verify email is None and the other fields have their expected values.
+    expected_patient={
+            "id": patient_id,     
+            "first_name": "Anna",
+            "last_name": "Johnson",
+            "birthdate": "1982-12-10",
+            "email": None
+        }
+    assert patient_changed.json() == expected_patient
