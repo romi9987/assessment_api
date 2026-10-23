@@ -20,29 +20,6 @@ def setup_test_database():
     Base.metadata.create_all(bind=test_engine)
     yield
 
-# @pytest.fixture
-# def client():
-#     connection = test_engine.connect()
-#     transaction = connection.begin()
-
-#     session = Session(
-#         bind=connection,
-#         join_transaction_mode="create_savepoint"
-#     )
-
-#     def override_get_test_session():
-#         yield session
-
-#     app.dependency_overrides[get_session] = override_get_test_session
-
-#     try:
-#         with TestClient(app) as test_client:
-#             yield test_client
-#     finally:
-#         app.dependency_overrides.pop(get_session, None)
-#         session.close()
-#         transaction.rollback()
-#         connection.close()
 @pytest.fixture
 def db_session():
     with test_engine.connect() as connection:
