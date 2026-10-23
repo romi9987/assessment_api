@@ -1,5 +1,7 @@
 from sqlalchemy import select
+
 from models import AssessmentDB
+
 
 def test_create_assessment(client):
     # 1. Create a patient using client.post()
@@ -549,3 +551,56 @@ def test_put_patient_omitted_email(client):
             "email": None
         }
     assert patient_changed.json() == expected_patient
+
+def test_delete_patient_twice(client):
+    # 1. Create a patient.
+    patient_response = client.post(
+        "/patients",
+        json={     
+                "first_name": "Anna",
+                "last_name": "Smith",
+                "birthdate": "1982-12-10",
+                "email": "anna@example.com"
+            }
+    )
+    assert patient_response.status_code == 201
+    patient_id = patient_response.json()["id"]
+
+    # 2. Delete the patient. Verify HTTP 200.
+    delete_response = client.delete(
+        f"/patients/{patient_id}"
+    )
+    assert delete_response.status_code == 200
+
+    # 3. Try deleting the same patient again. Verify HTTP 404.
+    delete_again = client.delete(
+        f"/patients/{patient_id}"
+    )
+    assert delete_again.status_code == 404
+
+def test_get_deleted_patient_returns_404(client):
+    # 1. Request a patient ID that does not exist.
+    patient_response = client.post(
+        "/patients",
+        json={     
+                "first_name": "Anna",
+                "last_name": "Smith",
+                "birthdate": "1982-12-10",
+                "email": "anna@example.com"
+            }
+    )
+    assert patient_response.status_code == 201
+    patient_id = patient_response.json()["id"]
+
+    delete_response = client.delete(
+        f"/patients/{patient_id}"
+    )
+    assert delete_response.status_code == 200
+
+    get_patient = client.get(
+        f"/patients/{patient_id}"
+    )
+
+    # 2. Verify HTTP 404 and the error message.
+    assert get_patient.status_code == 404
+    assert get_patient.json()["detail"] == f"Patient of id {patient_id} not found."
