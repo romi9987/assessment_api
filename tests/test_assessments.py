@@ -258,3 +258,162 @@ def test_cascade_delete(client, db_session):
     statement = select(AssessmentDB).where(AssessmentDB.patient_id == patient_id)
     remaining_assessments = db_session.execute(statement).scalars().all()
     assert remaining_assessments == []
+
+def test_patch_patient(client):
+    # 1. Create a patient with all four fields.
+    patient_response = client.post(
+        "/patients",
+        json={     
+                "first_name": "Anna",
+                "last_name": "Smith",
+                "birthdate": "1982-12-10",
+                "email": "anna@example.com"
+            }
+    )
+    assert patient_response.status_code == 201
+    patient_id = patient_response.json()["id"]
+
+    # 2. PATCH only the last_name.
+    patch_response = client.patch(
+        f"/patients/{patient_id}",
+        json={
+            "last_name": "Johnson"
+        }
+    )
+    assert patch_response.status_code == 200
+
+    # 3. Verify changed data.
+    expected_patient = {
+        "id": patient_id,
+        "first_name": "Anna",
+        "last_name": "Johnson",
+        "birthdate": "1982-12-10",
+        "email": "anna@example.com",
+    }
+    assert patch_response.json() == expected_patient
+
+    # 4. GET the patient again to verify the changes were persisted.
+    changed_patient = client.get(
+        f"/patients/{patient_id}"
+    )
+    assert changed_patient.status_code == 200
+    assert changed_patient.json() == expected_patient
+
+def test_patch_patient_empty_body(client):
+    # 1. Create a patient.
+    patient_response = client.post(
+        "/patients",
+        json={     
+                "first_name": "Anna",
+                "last_name": "Smith",
+                "birthdate": "1982-12-10",
+                "email": "anna@example.com"
+            }
+    )
+    assert patient_response.status_code == 201
+    patient_id = patient_response.json()["id"]
+
+    # 2. Send PATCH with an empty JSON object:
+    patch_response = client.patch(
+        f"/patients/{patient_id}",
+        json={}
+    )
+
+    # 3. Verify HTTP 400.
+    assert patch_response.status_code == 400
+
+    # 4. Verify the error message.
+    assert patch_response.json()["detail"] == "At least one field must be provided."
+
+    # 5. Verify the patient's data remains unchanged.
+    patient_unchanged = client.get(
+        f"/patients/{patient_id}"
+    )
+    assert patient_unchanged.status_code == 200
+
+    expected_patient = {
+        "id": patient_id,
+        "first_name": "Anna",
+        "last_name": "Smith",
+        "birthdate": "1982-12-10",
+        "email": "anna@example.com",
+    }
+    assert patient_unchanged.json() == expected_patient
+
+def test_patch_patient_null_last_name(client):
+    # 1. Create a patient.
+    patient_response = client.post(
+        "/patients",
+        json={     
+                "first_name": "Anna",
+                "last_name": "Smith",
+                "birthdate": "1982-12-10",
+                "email": "anna@example.com"
+            }
+    )
+    assert patient_response.status_code == 201
+    patient_id = patient_response.json()["id"]
+
+    # 2. PATCH with {"last_name": None}.
+    patch_response = client.patch(
+        f"/patients/{patient_id}",
+        json={
+            "last_name": None
+        }
+    )
+
+    # 3. Verify HTTP 422.
+    assert patch_response.status_code == 422
+
+    # 4. Verify the last name remains unchanged.
+    patient_unchanged = client.get(
+        f"/patients/{patient_id}"
+    )
+    assert patient_unchanged.status_code == 200
+
+    last_name = patient_unchanged.json()["last_name"]
+    assert last_name == "Smith" 
+
+def test_patch_patient_remove_email(client):
+    # 1. Create a patient with an email address.
+    patient_response = client.post(
+        "/patients",
+        json={     
+                "first_name": "Anna",
+                "last_name": "Smith",
+                "birthdate": "1982-12-10",
+                "email": "anna@example.com"
+            }
+    )
+    assert patient_response.status_code == 201
+    patient_id = patient_response.json()["id"]
+
+    # 2. PATCH the patient using {"email": None}.
+    patch_response = client.patch(
+        f"/patients/{patient_id}",
+        json={
+            "email": None
+        }
+    )
+
+    # 3. Verify HTTP 200.
+    assert patch_response.status_code == 200
+
+    # 4. Verify the PATCH response contains email=None.
+    assert patch_response.json()["email"] is None
+
+    # 5. GET the patient again.
+    patient_changed = client.get(
+        f"/patients/{patient_id}"
+    )
+    assert patient_changed.status_code == 200
+
+    # 6. Verify email is still None and other fields are unchanged.
+    expected_patient = {
+        "id": patient_id,
+        "first_name": "Anna",
+        "last_name": "Smith",
+        "birthdate": "1982-12-10",
+        "email": None,
+    }
+    assert patient_changed.json() == expected_patient
