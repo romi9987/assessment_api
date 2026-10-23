@@ -20,29 +20,55 @@ def setup_test_database():
     Base.metadata.create_all(bind=test_engine)
     yield
 
+# @pytest.fixture
+# def client():
+#     connection = test_engine.connect()
+#     transaction = connection.begin()
+
+#     session = Session(
+#         bind=connection,
+#         join_transaction_mode="create_savepoint"
+#     )
+
+#     def override_get_test_session():
+#         yield session
+
+#     app.dependency_overrides[get_session] = override_get_test_session
+
+#     try:
+#         with TestClient(app) as test_client:
+#             yield test_client
+#     finally:
+#         app.dependency_overrides.pop(get_session, None)
+#         session.close()
+#         transaction.rollback()
+#         connection.close()
 @pytest.fixture
-def client():
-    connection = test_engine.connect()
-    transaction = connection.begin()
+def db_session():
+    with test_engine.connect() as connection:
+        transaction = connection.begin()
 
-    session = Session(
-        bind=connection,
-        join_transaction_mode="create_savepoint"
-    )
+        with Session(
+            bind=connection,
+            join_transaction_mode="create_savepoint"
+        ) as session:
+            try:
+                yield session
+            finally:
+                transaction.rollback()
 
-    def override_get_test_session():
-        yield session
+@pytest.fixture
+def client(db_session):
+    def override_get_session():
+        yield db_session
 
-    app.dependency_overrides[get_session] = override_get_test_session
+    app.dependency_overrides[get_session] = override_get_session
 
     try:
         with TestClient(app) as test_client:
             yield test_client
     finally:
         app.dependency_overrides.pop(get_session, None)
-        session.close()
-        transaction.rollback()
-        connection.close()
 
 assert test_engine.url.database == "assessment_test_db", (
     "Tests must use assessment_test_db!"
