@@ -604,3 +604,127 @@ def test_get_deleted_patient_returns_404(client):
     # 2. Verify HTTP 404 and the error message.
     assert get_patient.status_code == 404
     assert get_patient.json()["detail"] == f"Patient of id {patient_id} not found."
+
+def test_create_patient_invalid_email(client):
+    # 1. Send POST /patients with:
+    patient_response = client.post(
+        "/patients",
+        json={
+                "first_name": "Anna",
+                "last_name": "Smith",
+                "birthdate": "1982-12-10",
+                "email": "not-an-email"
+        }
+    )
+    # 2. Verify HTTP 422.
+    assert patient_response.status_code == 422
+
+    # 3. Verify that the validation error concerns the email field.
+    assert patient_response.json()["detail"][0]["msg"] == ("value is not a valid email address: " 
+                                                     "An email address must have an @-sign.")
+    """
+    Let's understand this expression.
+    - errors is a list of validation-error dictionaries.
+    - for error in errors iterates through the list.
+    - error["loc"] identifies the location of each error.
+    - any() returns True if at least one error matches.
+    This approach is more robust because it doesn't depend on the exact wording of Pydantic's error messages.
+    """
+    errors = patient_response.json()["detail"]
+    assert any(
+        error["loc"] == ["body", "email"]
+        for error in errors
+    )
+
+def test_create_patient_multiple_validation_errors(client):
+    patient_response = client.post(
+        "/patients",
+        json={
+            "first_name": "Al",
+            "last_name": "Smith",
+            "birthdate": "1982-12-10",
+            "email": "not-an-email"
+        }
+    )
+    # 2. Verify HTTP 422.
+    assert patient_response.status_code == 422
+
+    # 3. Extract the validation errors.
+    errors = patient_response.json()["detail"]
+    assert len(errors) == 2
+
+    # 4. Verify that first_name caused an error.
+    assert any(
+        error["loc"] == ["body", "first_name"]
+        for error in errors
+    )
+    # 5. Verify that email caused an error.
+    assert any(
+        error["loc"] == ["body", "email"]
+        for error in errors
+    )
+
+def test_create_patient_missing_birthdate(client):
+    # 1. POST a patient with first_name, last_name and email, but no birthdate.
+    patient_response = client.post(
+        "/patients",
+        json={
+            "first_name": "Alice",
+            "last_name": "Smith",
+            "email": "alice.smith@example.com"
+        }
+    )
+    # 2. Verify HTTP 422.
+    assert patient_response.status_code == 422
+
+    # 3. Verify the validation error concerns the birthdate field.
+    errors = patient_response.json()["detail"]
+    assert len(errors) == 1
+    assert errors[0]["type"] == "missing"
+    assert errors[0]["loc"] == ["body", "birthdate"]
+
+def test_create_patient_future_birthdate(client):
+    # 1. POST a patient whose birthdate is 2035-01-01.
+    patient_response = client.post(
+        "/patients",
+        json={
+            "first_name": "Alice",
+            "last_name": "Smith",
+            "birthdate": "2035-01-01",
+            "email": "alice.smith@example.com"
+        }
+    )
+    # 2. Verify HTTP 422.
+    assert patient_response.status_code == 422
+
+    # 3. Verify the error concerns birthdate.
+    errors = patient_response.json()["detail"]
+    assert len(errors) == 1
+    assert errors[0]["loc"] == ["body", "birthdate"]
+
+    # 4. Inspect the error type.
+    assert errors[0]["type"] == "value_error"
+
+def test_create_patient_invalid_birthdate_format(client):
+    # 1. POST a patient with birthdate = "2026-15-40"
+    patient_response = client.post(
+        "/patients",
+        json={
+            "first_name": "Alice",
+            "last_name": "Smith",
+            "birthdate": "2026-15-40",
+            "email": "alice.smith@example.com"
+        }
+    )
+    # 2. Verify HTTP 422.
+    assert patient_response.status_code == 422
+
+    # 3. Verify exactly one validation error.
+    errors = patient_response.json()["detail"]
+    assert len(errors) == 1
+
+    # 4. Verify the error concerns birthdate.
+    assert errors[0]["loc"] == ["body", "birthdate"]
+
+    # 5. Verify the error type is "date_from_datetime_parsing".
+    assert errors[0]["type"] == "date_from_datetime_parsing"
