@@ -1,6 +1,6 @@
-from sqlalchemy import select
+from sqlalchemy import func, select
 
-from models import AssessmentDB
+from models import AssessmentDB, PatientDB
 
 
 def test_create_assessment(client):
@@ -728,3 +728,27 @@ def test_create_patient_invalid_birthdate_format(client):
 
     # 5. Verify the error type is "date_from_datetime_parsing".
     assert errors[0]["type"] == "date_from_datetime_parsing"
+
+def test_invalid_patient_not_saved(client, db_session):
+    # 1. Count the patients currently in the database.
+    statement = select(func.count()).select_from(PatientDB)
+    patient_count_before = db_session.scalar(statement)
+
+    # 2. POST a patient with an invalid email.
+    patient_response = client.post(
+        "/patients",
+        json={
+            "first_name": "Alice",
+            "last_name": "Smith",
+            "birthdate": "1982-10-12",
+            "email": "not-an-email"
+        }
+    )
+    # 3. Verify HTTP 422.
+    assert patient_response.status_code == 422
+
+    # 4. Count the patients again.
+    patient_count_after = db_session.scalar(statement)
+
+    # 5. Verify the count hasn't changed.
+    assert patient_count_before == patient_count_after
