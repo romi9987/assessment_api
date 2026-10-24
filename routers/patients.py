@@ -11,7 +11,7 @@ from utils import find_patient
 
 router = APIRouter(prefix="/patients", tags=["patients"])
 
-@router.post("", response_model=PatientResponse)
+@router.post("", response_model=PatientResponse, status_code=201)
 def create_patient(patient: PatientCreate, session: Annotated[Session, Depends(get_session)]):
     patient_db = PatientDB(
         first_name = patient.first_name,
