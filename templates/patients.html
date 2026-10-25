@@ -1,11 +1,11 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Patients</title>
-</head>
-<body>
-    <h1>Patients</h1>
+{% extends "base.html" %}
+
+{% block title %}
+    Patients
+{% endblock %}
+
+{% block content %}
+    <h2>Patients</h2>
     <table>
         <thead>
             <tr>
@@ -19,7 +19,7 @@
         <tbody>
             {% for patient in patients %}
                 <tr>
-                    <td>{{patient.id}}</td>
+                    <td>{{ patient.id }}</td>
                     <td>{{ patient.first_name }}</td>
                     <td>{{ patient.last_name }}</td>
                     <td>{{ patient.birthdate }}</td>
@@ -32,5 +32,4 @@
             {% endfor %}
         </tbody>
     </table>
-</body>
-</html>
+{% endblock %}
