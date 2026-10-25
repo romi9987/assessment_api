@@ -6,9 +6,31 @@
 </head>
 <body>
     <h1>Patients</h1>
-
-    {% for patient in patients %}
-        <p>{{patient.id}} {{ patient.first_name }} {{ patient.last_name }} {{patient.birthdate}} {{patient.email}}</p>
-    {% endfor %}
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>First name</th>
+                <th>Last name</th>
+                <th>Birthdate</th>
+                <th>Email</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for patient in patients %}
+                <tr>
+                    <td>{{patient.id}}</td>
+                    <td>{{ patient.first_name }}</td>
+                    <td>{{ patient.last_name }}</td>
+                    <td>{{ patient.birthdate }}</td>
+                    <td>{{ patient.email if patient.email else "—" }}</td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="5">No patients found.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 </body>
 </html>
