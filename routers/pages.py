@@ -1,7 +1,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Form, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import ValidationError
 from sqlalchemy import select
@@ -50,6 +50,13 @@ def create_patient_from_form(
             email = email or ""
         )
     except ValidationError as exc:
+        if request.headers.get("HX-Request") == "true":
+            return templates.TemplateResponse(
+                request=request,
+                name="partials/form_errors.html",
+                context={"errors": exc.errors()},
+                status_code=422
+            )
         return templates.TemplateResponse(
             request=request,
             name="patient_form.html",
@@ -69,9 +76,11 @@ def create_patient_from_form(
     patient_db = PatientDB(**patient.model_dump())
     session.add(patient_db)
     session.commit()
-    # session.refresh(patient_db) isn't necessary 
-    # if you immediately redirect without using the refreshed object.
-    # session.refresh(patient_db)
+    if request.headers.get("HX-Request") == "true":
+        return HTMLResponse(
+            content="<p>Patient created successfully!</p>",
+            status_code=200
+        )
 
     return RedirectResponse(
         url="/ui/patients",

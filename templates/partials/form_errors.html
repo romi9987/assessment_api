@@ -1,0 +1,8 @@
+<!--Notice that this template doesn't extend base.html. It's a fragment, not a complete HTML page.-->
+{% if errors %}
+    <ul>
+        {% for error in errors %}
+            <li>{{ error.msg }}</li>
+        {% endfor %}
+    </ul>
+{% endif %}

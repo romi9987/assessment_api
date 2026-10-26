@@ -32,4 +32,14 @@
             {% endfor %}
         </tbody>
     </table>
+
+    <button
+        hx-get="/ui/message"
+        hx-target="#message"
+        hx-swap="beforeend"
+    >
+        Load message
+    </button>
+
+    <div id="message">Waiting...</div>
 {% endblock %}
