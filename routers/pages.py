@@ -91,3 +91,14 @@ def create_patient_from_form(
         # This is known as the Post/Redirect/Get pattern.
         status_code=303
     )
+
+@router.get("/patients/search")
+def search_patients(
+    session: Annotated[Session, Depends(get_session)],
+    q: str = "",
+):
+    statement = select(PatientDB).where(
+        PatientDB.last_name.ilike(f"%{q}%")
+    )
+    result = session.execute(statement).scalars().all()
+    return result
