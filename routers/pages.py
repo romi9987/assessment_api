@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import ValidationError
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from database import get_session
@@ -94,11 +94,20 @@ def create_patient_from_form(
 
 @router.get("/patients/search")
 def search_patients(
+    request: Request,
     session: Annotated[Session, Depends(get_session)],
     q: str = "",
 ):
     statement = select(PatientDB).where(
-        PatientDB.last_name.ilike(f"%{q}%")
+        or_(
+            PatientDB.last_name.ilike(f"%{q}%"),
+            PatientDB.first_name.ilike(f"%{q}%"),
+            (PatientDB.first_name + " " + PatientDB.last_name).ilike(f"%{q}%")
+        )
     )
     result = session.execute(statement).scalars().all()
-    return result
+    return templates.TemplateResponse(
+        request=request,
+        name="partials/patient_rows.html",
+        context={"patients":result},
+    )

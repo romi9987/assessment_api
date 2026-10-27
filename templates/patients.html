@@ -6,6 +6,17 @@
 
 {% block content %}
     <h2>Patients</h2>
+
+    <input
+        type="search"
+        name="q"
+        placeholder="Search by last name..."
+        hx-get="/ui/patients/search"
+        hx-trigger="input changed delay:300ms"
+        hx-target="#patient-list"
+        hx-swap="innerHTML"
+    >
+
     <table>
         <thead>
             <tr>
@@ -16,20 +27,8 @@
                 <th>Email</th>
             </tr>
         </thead>
-        <tbody>
-            {% for patient in patients %}
-                <tr>
-                    <td>{{ patient.id }}</td>
-                    <td>{{ patient.first_name }}</td>
-                    <td>{{ patient.last_name }}</td>
-                    <td>{{ patient.birthdate }}</td>
-                    <td>{{ patient.email if patient.email else "—" }}</td>
-                </tr>
-            {% else %}
-                <tr>
-                    <td colspan="5">No patients found.</td>
-                </tr>
-            {% endfor %}
+        <tbody id="patient-list">
+            {% include "partials/patient_rows.html" %}
         </tbody>
     </table>
 
