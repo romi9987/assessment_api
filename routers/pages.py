@@ -23,12 +23,25 @@ def list_patients(
     ):
     page_size = 5
     offset = (page - 1) * page_size
-    statement = select(PatientDB).order_by(PatientDB.id).limit(page_size).offset(offset)
+    statement = (
+        select(PatientDB)
+        .order_by(PatientDB.id).
+        limit(page_size + 1)
+        .offset(offset)
+    )
     patients = session.execute(statement).scalars().all()
+
+    has_next = len(patients) > page_size
+    visible_patients = patients[:page_size]
     return templates.TemplateResponse(
         request=request,
         name="patients.html",
-        context={"patients": patients}
+        context={
+            "patients": visible_patients,
+            "page": page,
+            "has_next": has_next,
+            "has_previous": page > 1,
+        }
     )
 
 @router.get("/patients/new")

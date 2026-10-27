@@ -36,6 +36,18 @@
         </tbody>
     </table>
 
+    <div>
+        {% if has_previous %}
+            <a href="/ui/patients?page={{ page - 1 }}">Previous</a>
+        {% endif %}
+
+        <span>Page {{ page }}</span>
+
+        {% if has_next %}
+            <a href="/ui/patients?page={{ page + 1 }}">Next</a>
+        {% endif %}
+    </div>
+
     <button
         hx-get="/ui/message"
         hx-target="#message"
