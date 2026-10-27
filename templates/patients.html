@@ -15,7 +15,11 @@
         hx-trigger="input changed delay:300ms"
         hx-target="#patient-list"
         hx-swap="innerHTML"
+        hx-indicator="#search-loading"
     >
+    <span id="search-loading" class="htmx-indicator">
+        Searching...
+    </span>
 
     <table>
         <thead>
