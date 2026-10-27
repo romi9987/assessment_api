@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Form, Request
+from fastapi import APIRouter, Depends, Form, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import ValidationError
@@ -16,8 +16,14 @@ router = APIRouter(prefix="/ui", tags=["ui"])
 templates = Jinja2Templates(directory="templates")
 
 @router.get("/patients")
-def list_patients(request: Request, session: Annotated[Session, Depends(get_session)]):
-    statement = select(PatientDB)
+def list_patients(
+    request: Request, 
+    session: Annotated[Session, Depends(get_session)],
+    page: int = Query(default=1, ge=1),
+    ):
+    page_size = 5
+    offset = (page - 1) * page_size
+    statement = select(PatientDB).order_by(PatientDB.id).limit(page_size).offset(offset)
     patients = session.execute(statement).scalars().all()
     return templates.TemplateResponse(
         request=request,
@@ -96,15 +102,23 @@ def create_patient_from_form(
 def search_patients(
     request: Request,
     session: Annotated[Session, Depends(get_session)],
+    page: int = Query(default=1, ge=1),
     q: str = "",
 ):
-    statement = select(PatientDB).where(
-        or_(
-            PatientDB.last_name.ilike(f"%{q}%"),
-            PatientDB.first_name.ilike(f"%{q}%"),
-            (PatientDB.first_name + " " + PatientDB.last_name).ilike(f"%{q}%")
+    page_size = 5
+    offset = (page - 1) * page_size
+    statement = (
+        select(PatientDB).where(
+            or_(
+                PatientDB.last_name.ilike(f"%{q}%"),
+                PatientDB.first_name.ilike(f"%{q}%"),
+                (PatientDB.first_name + " " + PatientDB.last_name).ilike(f"%{q}%")
+            )
         )
-    )
+        .order_by(PatientDB.id)
+        .limit(page_size)
+        .offset(offset)
+    )   
     result = session.execute(statement).scalars().all()
     return templates.TemplateResponse(
         request=request,
