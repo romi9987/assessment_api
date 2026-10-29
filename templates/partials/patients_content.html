@@ -1,0 +1,40 @@
+<table>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>First name</th>
+            <th>Last name</th>
+            <th>Birthdate</th>
+            <th>Email</th>
+        </tr>
+    </thead>
+    <tbody id="patient-list">
+        {% include "partials/patient_rows.html" %}
+    </tbody>
+</table>
+
+<div>
+    {% set base_url = "/ui/patients/search" if search_mode else "/ui/patients" %}
+    {% if has_previous %}
+        <a 
+            hx-get="{{ base_url }}?page={{ page - 1 }}{% if search_mode %}&q={{ q | urlencode }}{% endif %}"
+            hx-target="#patients-content"
+            hx-swap="innerHTML"
+        >
+        <!--{{ q | urlencode }} safely encodes the search term for inclusion in a URL.-->
+            Previous
+        </a>
+    {% endif %}
+
+    <span>Page {{ page }}</span>
+
+    {% if has_next %}
+        <a
+            hx-get="{{ base_url }}?page={{ page + 1 }}{% if search_mode %}&q={{ q | urlencode }}{% endif %}"
+            hx-target="#patients-content"
+            hx-swap="innerHTML"
+        >
+            Next
+        </a>
+    {% endif %}
+</div>

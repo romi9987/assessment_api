@@ -11,9 +11,9 @@
         type="search"
         name="q"
         placeholder="Search by last name..."
-        hx-get="/ui/patients/search"
+        hx-get="/ui/patients/search?page=1"
         hx-trigger="input changed delay:300ms"
-        hx-target="#patient-list"
+        hx-target="#patients-content"
         hx-swap="innerHTML"
         hx-indicator="#search-loading"
     >
@@ -21,31 +21,8 @@
         Searching...
     </span>
 
-    <table>
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>First name</th>
-                <th>Last name</th>
-                <th>Birthdate</th>
-                <th>Email</th>
-            </tr>
-        </thead>
-        <tbody id="patient-list">
-            {% include "partials/patient_rows.html" %}
-        </tbody>
-    </table>
-
-    <div>
-        {% if has_previous %}
-            <a href="/ui/patients?page={{ page - 1 }}">Previous</a>
-        {% endif %}
-
-        <span>Page {{ page }}</span>
-
-        {% if has_next %}
-            <a href="/ui/patients?page={{ page + 1 }}">Next</a>
-        {% endif %}
+    <div id="patients-content">
+        {% include "partials/patients_content.html" %}
     </div>
 
     <button

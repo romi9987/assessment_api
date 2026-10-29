@@ -33,15 +33,23 @@ def list_patients(
 
     has_next = len(patients) > page_size
     visible_patients = patients[:page_size]
-    return templates.TemplateResponse(
-        request=request,
-        name="patients.html",
-        context={
+    context={
             "patients": visible_patients,
             "page": page,
             "has_next": has_next,
             "has_previous": page > 1,
-        }
+            "search_mode": False,
+            }
+    if request.headers.get("HX-Request") == "true":
+        return templates.TemplateResponse(
+            request=request,
+            name="partials/patients_content.html",
+            context=context,
+        )
+    return templates.TemplateResponse(
+        request=request,
+        name="patients.html",
+        context=context,
     )
 
 @router.get("/patients/new")
@@ -129,12 +137,22 @@ def search_patients(
             )
         )
         .order_by(PatientDB.id)
-        .limit(page_size)
+        .limit(page_size + 1)
         .offset(offset)
     )   
     result = session.execute(statement).scalars().all()
+    has_next = len(result) > page_size
+    visible_patients = result[:page_size]
+    context={
+            "patients": visible_patients,
+            "page": page,
+            "has_next": has_next,
+            "has_previous": page > 1,
+            "search_mode": True,
+            "q": q,
+            }
     return templates.TemplateResponse(
         request=request,
-        name="partials/patient_rows.html",
-        context={"patients":result},
+        name="partials/patients_content.html",
+        context=context,
     )
