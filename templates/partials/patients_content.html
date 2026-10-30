@@ -14,10 +14,9 @@
 </table>
 
 <div>
-    {% set base_url = "/ui/patients/search" if search_mode else "/ui/patients" %}
     {% if has_previous %}
         <a 
-            hx-get="{{ base_url }}?page={{ page - 1 }}{% if search_mode %}&q={{ q | urlencode }}{% endif %}"
+            hx-get="/ui/patients?page={{ page - 1 }}&q={{ q | urlencode }}"
             hx-target="#patients-content"
             hx-swap="innerHTML"
         >
@@ -30,7 +29,7 @@
 
     {% if has_next %}
         <a
-            hx-get="{{ base_url }}?page={{ page + 1 }}{% if search_mode %}&q={{ q | urlencode }}{% endif %}"
+            hx-get="/ui/patients?page={{ page + 1 }}&q={{ q | urlencode }}"
             hx-target="#patients-content"
             hx-swap="innerHTML"
         >

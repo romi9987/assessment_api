@@ -20,11 +20,23 @@ def list_patients(
     request: Request, 
     session: Annotated[Session, Depends(get_session)],
     page: int = Query(default=1, ge=1),
+    q: str = "",
     ):
     page_size = 5
     offset = (page - 1) * page_size
+    statement = select(PatientDB)
+    if q:
+        statement = (
+            select(PatientDB).where(
+                or_(
+                    PatientDB.first_name.ilike(f"%{q}%"),
+                    PatientDB.last_name.ilike(f"%{q}%"),
+                    (PatientDB.first_name + " " + PatientDB.last_name).ilike(f"%{q}%")
+                )
+            )
+        )
     statement = (
-        select(PatientDB)
+        statement
         .order_by(PatientDB.id).
         limit(page_size + 1)
         .offset(offset)
@@ -38,7 +50,7 @@ def list_patients(
             "page": page,
             "has_next": has_next,
             "has_previous": page > 1,
-            "search_mode": False,
+            "q": q,
             }
     if request.headers.get("HX-Request") == "true":
         return templates.TemplateResponse(
@@ -117,42 +129,4 @@ def create_patient_from_form(
         # not submit the form again.
         # This is known as the Post/Redirect/Get pattern.
         status_code=303
-    )
-
-@router.get("/patients/search")
-def search_patients(
-    request: Request,
-    session: Annotated[Session, Depends(get_session)],
-    page: int = Query(default=1, ge=1),
-    q: str = "",
-):
-    page_size = 5
-    offset = (page - 1) * page_size
-    statement = (
-        select(PatientDB).where(
-            or_(
-                PatientDB.last_name.ilike(f"%{q}%"),
-                PatientDB.first_name.ilike(f"%{q}%"),
-                (PatientDB.first_name + " " + PatientDB.last_name).ilike(f"%{q}%")
-            )
-        )
-        .order_by(PatientDB.id)
-        .limit(page_size + 1)
-        .offset(offset)
-    )   
-    result = session.execute(statement).scalars().all()
-    has_next = len(result) > page_size
-    visible_patients = result[:page_size]
-    context={
-            "patients": visible_patients,
-            "page": page,
-            "has_next": has_next,
-            "has_previous": page > 1,
-            "search_mode": True,
-            "q": q,
-            }
-    return templates.TemplateResponse(
-        request=request,
-        name="partials/patients_content.html",
-        context=context,
     )
