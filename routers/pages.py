@@ -1,3 +1,4 @@
+from urllib.parse import urlencode
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request
@@ -57,6 +58,20 @@ def list_patients(
 
     has_next = len(patients) > page_size
     visible_patients = patients[:page_size]
+
+    if not visible_patients and page > 1:
+        previous_page = page - 1
+        url = f"/ui/patients?{urlencode({'page': previous_page, 'q': q})}"
+        if request.headers.get("HX-Request") == "true":
+            return Response(
+                status_code=200,
+                headers={"HX-Redirect": url}
+            )
+        return RedirectResponse(
+                url=url,
+                status_code=303
+            ) 
+
     context={
             "patients": visible_patients,
             "page": page,
