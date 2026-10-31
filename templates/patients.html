@@ -6,30 +6,40 @@
 
 {% block content %}
     <h2>Patients</h2>
-    <table>
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>First name</th>
-                <th>Last name</th>
-                <th>Birthdate</th>
-                <th>Email</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for patient in patients %}
-                <tr>
-                    <td>{{ patient.id }}</td>
-                    <td>{{ patient.first_name }}</td>
-                    <td>{{ patient.last_name }}</td>
-                    <td>{{ patient.birthdate }}</td>
-                    <td>{{ patient.email if patient.email else "—" }}</td>
-                </tr>
-            {% else %}
-                <tr>
-                    <td colspan="5">No patients found.</td>
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+
+    <input
+        type="search"
+        name="q"
+        placeholder="Search by last name..."
+        hx-get="/ui/patients?page=1"
+        hx-trigger="input changed delay:300ms"
+        hx-target="#patients-content"
+        hx-swap="innerHTML"
+        hx-push-url="true"
+        hx-indicator="#search-loading"
+    >
+    <span id="search-loading" class="htmx-indicator">
+        Searching...
+    </span>
+
+    <div 
+        id="patients-content"
+        hx-get="/ui/patients?page=1"
+        hx-target="#patients-content"
+        hx-swap="innerHTML"
+    >
+        {% include "partials/patients_content.html" %}
+    </div>
+
+    <script>
+        document.body.addEventListener("patientDeleted", function() {
+            const url = window.location.pathname + window.location.search;
+
+            htmx.ajax("GET", url, {
+                target: "#patients-content",
+                swap: "innerHTML"
+            });
+        });
+    </script>
+
 {% endblock %}

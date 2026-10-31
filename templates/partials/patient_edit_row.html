@@ -1,0 +1,69 @@
+<tr id="patient-{{ patient.id }}">
+    <td>{{ patient.id }}</td>
+
+    <td>
+        <input
+            type="text"
+            name="first_name"
+            value="{{ form_data.first_name if form_data is defined else patient.first_name }}"
+            form="edit-form-{{ patient.id }}"
+        >
+    </td>
+
+    <td>
+        <input
+            type="text"
+            name="last_name"
+            value="{{ form_data.last_name if form_data is defined else patient.last_name }}"
+            form="edit-form-{{ patient.id }}"
+        >
+    </td>
+
+    <td>
+        <input
+            type="date"
+            name="birthdate"
+            value="{{ form_data.birthdate if form_data is defined else patient.birthdate }}"
+            form="edit-form-{{ patient.id }}"
+        >
+    </td>
+
+    <td>
+        <input
+            type="email"
+            name="email"
+            value="{{ form_data.email if form_data is defined else (patient.email or '') }}"
+            form="edit-form-{{ patient.id }}"
+        >
+    </td>
+
+    <td>
+        <form
+            id="edit-form-{{ patient.id }}"
+            hx-patch="/ui/patients/{{ patient.id }}"
+            hx-target="#patient-{{ patient.id }}"
+            hx-swap="outerHTML"
+        >
+        <!--you can add novalidate to form for testing-->
+            <button type="submit">Save</button>
+        </form>
+        
+        <button 
+            type="button"
+            hx-get="/ui/patients/{{ patient.id }}/row"
+            hx-target="#patient-{{ patient.id }}"
+            hx-swap="outerHTML"
+        >
+            Cancel
+        </button>
+
+        {% if errors is defined and errors %}
+            <ul class="validation-errors">
+                {% for error in errors %}
+                    <li>{{ error.msg }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+
+    </td>
+</tr>

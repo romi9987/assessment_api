@@ -1,0 +1,30 @@
+<tr id="patient-{{ patient.id }}">
+    <td>{{ patient.id }}</td>
+    <td>{{ patient.first_name }}</td>
+    <td>{{ patient.last_name }}</td>
+    <td>{{ patient.birthdate }}</td>
+    <td>{{ patient.email if patient.email else "—" }}</td>
+    <td>        
+        <button 
+            type="button"
+            hx-get="/ui/patients/{{ patient.id }}/edit"
+            hx-target="#patient-{{ patient.id }}"
+            hx-swap="outerHTML"
+        >
+        <!--We're using outerHTML because we want to replace the <tr> element itself, not just its contents.-->
+            Edit
+        </button>
+    </td>
+    <td>
+        <button
+            type="button"
+            hx-delete="/ui/patients/{{ patient.id }}"
+            hx-target="#patient-{{ patient.id }}"
+            hx-swap="none"
+            hx-confirm="Are you sure you want to delete this patient?"
+        >
+        <!--hx-swap="none" prevents the DELETE response itself from modifying the table.-->
+            Delete
+        </button>
+    </td>
+</tr>

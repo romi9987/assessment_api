@@ -1,0 +1,9 @@
+<!--Notice that this fragment contains neither <table> nor <tbody>. 
+    It contains only the rows that belong inside the table body.-->
+{% for patient in patients %}
+    {% include "partials/patient_row.html" %}
+{% else %}
+    <tr>
+        <td colspan="6">No patients found.</td>
+    </tr>
+{% endfor %}

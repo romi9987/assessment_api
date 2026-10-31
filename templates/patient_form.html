@@ -6,9 +6,15 @@
 
 {% block content %}
 
-    <form action="/ui/patients" method="post">
+    <!-- <form action="/ui/patients" method="post"> -->
+    <form 
+        hx-post="/ui/patients" 
+        hx-target="#result" 
+        hx-swap="innerHTML"
+        hx-on::after-request="if(event.detail.xhr.status === 200) this.reset()"
+    > 
         <label for="first_name">First name:</label>
-        <input type="text" id="first_name" name="first_name" minlength="3" value="{{ form_data.first_name if form_data else '' }}" required>
+        <input type="text" id="first_name" name="first_name"  value="{{ form_data.first_name if form_data else '' }}" required>
         <label for="last_name">Last name:</label>
         <input type="text" id="last_name" name="last_name" minlength="3" value="{{ form_data.last_name if form_data else '' }}" required>
         <label for="birthdate">Birthdate:</label>
@@ -17,6 +23,8 @@
         <input type="email" id="email" name="email" value="{{ form_data.email if form_data else '' }}">
         <button type="submit">Save</button>
     </form>
+    <div id="result"></div> 
+    <!-- HTMX will send the form data to FastAPI and insert the response into this <div>. -->
 
     {% if errors %}
         <ul>
