@@ -25,20 +25,21 @@
     <div 
         id="patients-content"
         hx-get="/ui/patients?page=1"
-        hx-trigger="patientDeleted from: body"
         hx-target="#patients-content"
         hx-swap="innerHTML"
     >
         {% include "partials/patients_content.html" %}
     </div>
 
-    <button
-        hx-get="/ui/message"
-        hx-target="#message"
-        hx-swap="beforeend"
-    >
-        Load message
-    </button>
+    <script>
+        document.body.addEventListener("patientDeleted", function() {
+            const url = window.location.pathname + window.location.search;
 
-    <div id="message">Waiting...</div>
+            htmx.ajax("GET", url, {
+                target: "#patients-content",
+                swap: "innerHTML"
+            });
+        });
+    </script>
+
 {% endblock %}
