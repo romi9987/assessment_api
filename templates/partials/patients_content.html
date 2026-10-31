@@ -19,6 +19,7 @@
             hx-get="/ui/patients?page={{ page - 1 }}&q={{ q | urlencode }}"
             hx-target="#patients-content"
             hx-swap="innerHTML"
+            hx-push-url="true"
         >
         <!--{{ q | urlencode }} safely encodes the search term for inclusion in a URL.-->
             Previous
@@ -32,6 +33,7 @@
             hx-get="/ui/patients?page={{ page + 1 }}&q={{ q | urlencode }}"
             hx-target="#patients-content"
             hx-swap="innerHTML"
+            hx-push-url="true"
         >
             Next
         </a>

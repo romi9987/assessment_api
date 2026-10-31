@@ -1,7 +1,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from pydantic import ValidationError
 from sqlalchemy import or_, select
@@ -214,3 +214,17 @@ def save_edit(
             name="partials/patient_row.html",
             context={"patient": patient,}
         )
+
+@router.delete("/patients/{patient_id}")
+def delete_patient(
+    patient_id: int,
+    session: Annotated[Session, Depends(get_session)]
+):
+    patient = session.get(PatientDB, patient_id)
+    if patient is not None:
+        session.delete(patient)
+        session.commit()
+    return Response(
+        status_code=200,
+        headers={"HX-Trigger": "patientDeleted"},
+    )

@@ -15,13 +15,20 @@
         hx-trigger="input changed delay:300ms"
         hx-target="#patients-content"
         hx-swap="innerHTML"
+        hx-push-url="true"
         hx-indicator="#search-loading"
     >
     <span id="search-loading" class="htmx-indicator">
         Searching...
     </span>
 
-    <div id="patients-content">
+    <div 
+        id="patients-content"
+        hx-get="/ui/patients?page=1"
+        hx-trigger="patientDeleted from: body"
+        hx-target="#patients-content"
+        hx-swap="innerHTML"
+    >
         {% include "partials/patients_content.html" %}
     </div>
 
