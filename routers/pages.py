@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Form, Query, Request
+from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import ValidationError
@@ -130,3 +130,92 @@ def create_patient_from_form(
         # This is known as the Post/Redirect/Get pattern.
         status_code=303
     )
+
+@router.get("/patients/{patient_id}/edit")
+def edit_patient(
+    request: Request, 
+    patient_id: int, 
+    session: Annotated[Session, Depends(get_session)],
+):
+    statement = select(PatientDB).where(PatientDB.id == patient_id)
+    patient = session.execute(statement).scalars().one_or_none()
+    if patient is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Patient of id: {patient_id} not found."
+        )
+    return templates.TemplateResponse(
+        request=request,
+        name="partials/patient_edit_row.html",
+        context={"patient": patient,}
+    )
+
+@router.get("/patients/{patient_id}/row")
+def cancel_edit(
+    request: Request,
+    patient_id: int,
+    session: Annotated[Session, Depends(get_session)],
+):
+    statement = select(PatientDB).where(PatientDB.id == patient_id)
+    patient = session.execute(statement).scalars().one_or_none()
+    if patient is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Patient of id {patient_id} not found."
+        )
+    return templates.TemplateResponse(
+        request=request,
+        name="partials/patient_row.html",
+        context={"patient": patient}
+    )
+
+@router.patch("/patients/{patient_id}")
+def save_edit(
+    request: Request,
+    session: Annotated[Session, Depends(get_session)],
+    patient_id: int,
+    first_name: Annotated[str, Form()],
+    last_name: Annotated[str, Form()],
+    birthdate: Annotated[str, Form()],
+    email: Annotated[str | None, Form()] = None,
+):
+    patient = session.get(PatientDB, patient_id)
+    if patient is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Patient of id {patient_id} not found."
+        )
+    try:
+        patient_data = PatientCreate(
+            first_name=first_name,
+            last_name=last_name,
+            birthdate=birthdate,
+            email=email or "",
+        )
+    except ValidationError as exc:
+        return templates.TemplateResponse(
+            request=request,
+            name="partials/patient_edit_row.html",
+            context={
+                "patient": patient,
+                "errors": exc.errors(),
+                "form_data": {
+                                "first_name": first_name,
+                                "last_name": last_name,
+                                "birthdate": birthdate,
+                                "email": email or ""
+                            },
+            },
+            status_code=422,
+        )
+    patient.first_name = patient_data.first_name
+    patient.last_name = patient_data.last_name
+    patient.birthdate = patient_data.birthdate
+    patient.email = patient_data.email
+    session.commit()
+    session.refresh(patient)
+    return templates.TemplateResponse(
+            request=request,
+            name="partials/patient_row.html",
+            context={"patient": patient,}
+        )
