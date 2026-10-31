@@ -1,11 +1,11 @@
-from urllib.parse import urlencode
 from typing import Annotated
+from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from pydantic import ValidationError
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from database import get_session
@@ -36,11 +36,10 @@ def list_patients(
     q: str = "",
     ):
     page_size = 5
-    offset = (page - 1) * page_size
     statement = select(PatientDB)
     if q:
         statement = (
-            select(PatientDB).where(
+            statement.where(
                 or_(
                     PatientDB.first_name.ilike(f"%{q}%"),
                     PatientDB.last_name.ilike(f"%{q}%"),
@@ -48,20 +47,13 @@ def list_patients(
                 )
             )
         )
-    statement = (
-        statement
-        .order_by(PatientDB.id).
-        limit(page_size + 1)
-        .offset(offset)
+    count_statement = select(func.count()).select_from(
+        statement.subquery()
     )
-    patients = session.execute(statement).scalars().all()
-
-    has_next = len(patients) > page_size
-    visible_patients = patients[:page_size]
-
-    if not visible_patients and page > 1:
-        previous_page = page - 1
-        url = f"/ui/patients?{urlencode({'page': previous_page, 'q': q})}"
+    total_patients = session.scalar(count_statement)
+    last_page = max(1, (total_patients + page_size - 1) // page_size)
+    if page > last_page:
+        url = f"/ui/patients?{urlencode({'page': last_page, 'q': q})}"
         if request.headers.get("HX-Request") == "true":
             return Response(
                 status_code=200,
@@ -70,10 +62,20 @@ def list_patients(
         return RedirectResponse(
                 url=url,
                 status_code=303
-            ) 
+            )
+    offset = (page - 1) * page_size
+    statement = (
+        statement
+        .order_by(PatientDB.id).
+        limit(page_size)
+        .offset(offset)
+    )
+    patients = session.execute(statement).scalars().all()
+
+    has_next = page < last_page
 
     context={
-            "patients": visible_patients,
+            "patients": patients,
             "page": page,
             "has_next": has_next,
             "has_previous": page > 1,
