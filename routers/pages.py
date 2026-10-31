@@ -15,6 +15,18 @@ router = APIRouter(prefix="/ui", tags=["ui"])
 
 templates = Jinja2Templates(directory="templates")
 
+def find_patient(
+        session: Session,
+        patient_id: int,
+) -> PatientDB:
+    patient = session.get(PatientDB, patient_id)
+    if patient is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Patient of id: {patient_id} not found."
+        )
+    return patient
+
 @router.get("/patients")
 def list_patients(
     request: Request, 
@@ -137,13 +149,7 @@ def edit_patient(
     patient_id: int, 
     session: Annotated[Session, Depends(get_session)],
 ):
-    statement = select(PatientDB).where(PatientDB.id == patient_id)
-    patient = session.execute(statement).scalars().one_or_none()
-    if patient is None:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Patient of id: {patient_id} not found."
-        )
+    patient = find_patient(session=session, patient_id=patient_id)
     return templates.TemplateResponse(
         request=request,
         name="partials/patient_edit_row.html",
@@ -156,13 +162,7 @@ def cancel_edit(
     patient_id: int,
     session: Annotated[Session, Depends(get_session)],
 ):
-    statement = select(PatientDB).where(PatientDB.id == patient_id)
-    patient = session.execute(statement).scalars().one_or_none()
-    if patient is None:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Patient of id {patient_id} not found."
-        )
+    patient = find_patient(session=session, patient_id=patient_id)
     return templates.TemplateResponse(
         request=request,
         name="partials/patient_row.html",
@@ -179,12 +179,7 @@ def save_edit(
     birthdate: Annotated[str, Form()],
     email: Annotated[str | None, Form()] = None,
 ):
-    patient = session.get(PatientDB, patient_id)
-    if patient is None:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Patient of id {patient_id} not found."
-        )
+    patient = find_patient(session=session, patient_id=patient_id)
     try:
         patient_data = PatientCreate(
             first_name=first_name,
