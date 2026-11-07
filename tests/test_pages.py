@@ -328,7 +328,7 @@ def test_create_patient_from_form_htmx(client, db_session):
     assert saved_patient.first_name == "Anna"
     assert saved_patient.last_name == "Smith"
 
-def test_create_patient_from_form_without_email(client):
+def test_create_patient_from_form_without_email(client, db_session):
     response = client.post(
         "/ui/patients",
         data={
@@ -339,3 +339,212 @@ def test_create_patient_from_form_without_email(client):
         follow_redirects=False
     )
     assert response.status_code == 303
+
+    statement = select(PatientDB).where(
+        PatientDB.first_name == "Anna",
+        PatientDB.last_name == "Smith",
+        PatientDB.birthdate == date(1990, 5, 12)
+        )
+    saved_patient = db_session.scalar(statement)
+    assert saved_patient is not None
+    assert saved_patient.email is None
+
+def test_edit_patient_form(client, db_session):
+    john = PatientDB(
+        first_name = "John",
+        last_name = "Smith",
+        birthdate = date(1990, 4, 26),
+        email = "js@example.com"
+    )
+    db_session.add(john)
+    db_session.flush()
+
+    response = client.get(f"/ui/patients/{john.id}/edit")
+    assert response.status_code == 200
+
+    soup = BeautifulSoup(response.text, "html.parser")
+    first_name_input = soup.select_one('input[name="first_name"]')
+    last_name_input = soup.select_one('input[name="last_name"]')
+    email_input = soup.select_one('input[name="email"]')
+
+    assert first_name_input is not None
+    assert first_name_input.get("value") == "John"
+    assert last_name_input.get("value") == "Smith"
+    assert email_input.get("value") == "js@example.com"
+
+def test_update_patient_from_form(client, db_session):
+    john = PatientDB(
+        first_name="John",
+        last_name="Smith",
+        birthdate=date(1990, 4, 26),
+        email="js@example.com"
+    )
+    db_session.add(john)
+    db_session.flush()
+
+    response = client.patch(
+        f"/ui/patients/{john.id}",
+        data={
+            "first_name": "Anna",
+            "last_name": "Kowalski",
+            "birthdate": "1990-04-26",
+            "email": "akowalski@example.com"
+        },
+        headers={"HX-Request": "true"}
+    )
+    assert response.status_code == 200
+    assert "Kowalski" in response.text
+
+    statement = select(PatientDB).where(PatientDB.id == john.id)
+    saved_patient = db_session.scalar(statement)
+    assert saved_patient is not None
+    assert saved_patient.first_name == "Anna"
+    assert saved_patient.last_name == "Kowalski"
+    assert saved_patient.email == "akowalski@example.com"
+
+def test_update_patient_invalid_email(client, db_session):
+    john = PatientDB(
+        first_name="John",
+        last_name="Smith",
+        birthdate=date(1990, 4, 26),
+        email="js@example.com"
+    )
+    db_session.add(john)
+    db_session.flush()
+
+    response = client.patch(
+        f"/ui/patients/{john.id}",
+        data={
+            "first_name": "Anna",
+            "last_name": "Kowalski",
+            "birthdate": "1990-04-26",
+            "email": "not-an-email"
+        },
+        headers={"HX-Request": "true"}
+    )
+    assert response.status_code == 422
+    soup = BeautifulSoup(response.text, "html.parser")
+    assert "email" in soup.get_text().lower()
+
+    statement = select(PatientDB).where(PatientDB.id == john.id)
+    saved_patient = db_session.scalar(statement)
+    assert saved_patient is not None
+    assert saved_patient.first_name == "John"
+    assert saved_patient.last_name == "Smith"
+    assert saved_patient.email == "js@example.com"
+
+    first_name_input = soup.select_one('input[name="first_name"]')
+    last_name_input = soup.select_one('input[name="last_name"]')
+    email_input = soup.select_one('input[name="email"]')
+    assert first_name_input is not None
+    assert first_name_input.get("value") == "Anna"
+    assert last_name_input is not None
+    assert last_name_input.get("value") == "Kowalski"
+    assert email_input is not None
+    assert email_input.get("value") == "not-an-email"
+
+def test_cancel_patient_edit(client, db_session):
+    john = PatientDB(
+        first_name="John",
+        last_name="Smith",
+        birthdate=date(1990, 4, 26),
+        email="js@example.com"
+    )
+    db_session.add(john)
+    db_session.flush()
+
+    response = client.get(f"/ui/patients/{john.id}/row")
+    assert response.status_code == 200
+
+    statement = select(PatientDB).where(PatientDB.id == john.id)
+    saved_patient = db_session.scalar(statement)
+    assert saved_patient is not None
+    assert saved_patient.first_name == "John"
+    assert saved_patient.last_name == "Smith"
+    assert saved_patient.email == "js@example.com"
+
+    soup = BeautifulSoup(response.text, "html.parser")
+    first_name_input = soup.select_one('input[name="first_name"]')
+    last_name_input = soup.select_one('input[name="last_name"]')
+    assert first_name_input is None
+    assert last_name_input is None
+    assert "John" in soup.get_text()
+    assert "Smith" in soup.get_text()
+
+def test_edit_nonexistent_patient(client):
+    response = client.get("/ui/patients/999999/edit")
+    assert response.status_code == 404
+
+def test_update_nonexistent_patient(client):
+    response = client.patch(
+        "/ui/patients/999999",
+        data={
+            "first_name": "Anna",
+            "last_name": "Kowalski",
+            "birthdate": "1990-04-26",
+            "email": "akowalski@example.com"
+        },
+        headers={"HX-Request": "true"}
+    )
+    assert response.status_code == 404
+
+def test_cancel_edit_nonexistent_patient(client):
+    response = client.get("/ui/patients/999999/row")
+    assert response.status_code == 404
+
+def test_complete_patient_edit_workflow(client, db_session):
+    john = PatientDB(
+        first_name="John",
+        last_name="Smith",
+        birthdate=date(1990, 4, 26),
+        email="js@example.com"
+    )
+    db_session.add(john)
+    db_session.flush()
+
+    original_id = john.id
+
+    edit_response = client.get(
+        f"/ui/patients/{john.id}/edit",
+        headers={"HX-Request": "true"}
+    )
+    assert edit_response.status_code == 200
+
+    soup_edit = BeautifulSoup(edit_response.text, "html.parser")
+    first_name_input = soup_edit.select_one('input[name="first_name"]')
+    last_name_input = soup_edit.select_one('input[name="last_name"]')
+    assert first_name_input is not None
+    assert last_name_input is not None
+    assert first_name_input.get("value") == "John"
+    assert last_name_input.get("value") == "Smith"
+
+    update_response = client.patch(
+        f"/ui/patients/{john.id}",
+        data={
+            "first_name": "Jonathan",
+            "last_name": "Williams",
+            "birthdate": "1990-04-26",
+            "email": "jonathan@example.com"
+        },
+        headers={"HX-Request": "true"}
+    )
+    assert update_response.status_code == 200
+
+    soup_patch = BeautifulSoup(update_response.text, "html.parser")
+    assert "Jonathan" in soup_patch.get_text()
+    assert "Williams" in soup_patch.get_text()
+
+    first_name_input = soup_patch.select_one('input[name="first_name"]')
+    last_name_input = soup_patch.select_one('input[name="last_name"]')
+    assert first_name_input is None
+    assert last_name_input is None
+
+    db_session.expire_all() # to verify that later we use data from db, not from memory
+    statement = select(PatientDB).where(PatientDB.id == original_id)
+    saved_patient = db_session.scalar(statement)
+    assert saved_patient is not None
+    assert saved_patient.id == original_id
+    assert saved_patient.first_name == "Jonathan"
+    assert saved_patient.last_name == "Williams"
+    assert saved_patient.email == "jonathan@example.com"
+    assert saved_patient.birthdate == date(1990, 4, 26)
