@@ -115,7 +115,7 @@ def create_patient_from_form(
             first_name = first_name,
             last_name = last_name,
             birthdate = birthdate,
-            email = email or ""
+            email = email or None
         )
     except ValidationError as exc:
         if request.headers.get("HX-Request") == "true":
@@ -202,7 +202,7 @@ def save_edit(
             first_name=first_name,
             last_name=last_name,
             birthdate=birthdate,
-            email=email or "",
+            email=email or None,
         )
     except ValidationError as exc:
         return templates.TemplateResponse(
