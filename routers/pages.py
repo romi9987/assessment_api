@@ -9,7 +9,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from database import get_session
-from models import PatientDB
+from models import AssessmentDB, PatientDB
 from schemas import PatientCreate
 
 router = APIRouter(prefix="/ui", tags=["ui"])
@@ -244,4 +244,23 @@ def delete_patient(
     return Response(
         status_code=200,
         headers={"HX-Trigger": "patientDeleted"},
+    )
+
+@router.get("/patients/{patient_id}/assessments")
+def list_patient_assessments(
+    request: Request,
+    patient_id: int,
+    session: Annotated[Session, Depends(get_session)]
+    ):
+    patient = find_patient(session, patient_id)
+    statement = (
+        select(AssessmentDB)
+        .where(AssessmentDB.patient_id == patient_id)
+        .order_by(AssessmentDB.assessment_date.desc())
+        )
+    assessments = session.execute(statement).scalars().all()
+    return templates.TemplateResponse(
+        request=request,
+        name="assessments.html",
+        context={"patient": patient, "assessments": assessments}
     )

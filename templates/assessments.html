@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}
+    Assessments
+{% endblock %}
+
+{% block content %}
+    <h2>Assessments — {{ patient.first_name }} {{ patient.last_name }}</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Assessment Date</th>
+                <th>Score</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for assessment in assessments %}
+                <tr>
+                    <td>{{ assessment.assessment_date }}</td>
+                    <td>{{ assessment.score }}</td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="2">No assessments found.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+{% endblock %}
