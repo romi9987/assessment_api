@@ -347,6 +347,23 @@ def create_assessment_from_form(
         status_code=303
     )
 
+@router.get("/patients/{patient_id}/assessments/{assessment_id}/edit")
+def edit_assessment_form(
+    request: Request,
+    patient_id: int,
+    assessment_id: int,
+    session: Annotated[Session, Depends(get_session)]
+):
+    assessment = find_assessment(session, patient_id, assessment_id)
+    return templates.TemplateResponse(
+        request=request,
+        name="partials/assessment_edit_row.html",
+        context={
+            "assessment": assessment,
+            "patient_id": patient_id
+            }
+    )
+
 @router.delete("/patients/{patient_id}/assessments/{assessment_id}")
 def delete_assessment_from_page(
     patient_id: int,

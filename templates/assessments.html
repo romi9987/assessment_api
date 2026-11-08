@@ -22,7 +22,15 @@
                     <td>{{ assessment.id }}</td>
                     <td>{{ assessment.assessment_date }}</td>
                     <td>{{ assessment.score }}</td>
-                    <td>
+                    <td>        
+                        <button 
+                            type="button"
+                            hx-get="/ui/patients/{{ patient.id }}/assessments/{{ assessment.id }}/edit"
+                            hx-target="#assessment-{{ assessment.id }}"
+                            hx-swap="outerHTML"
+                        >
+                            Edit
+                        </button>
                         <button
                             type="button"
                             hx-delete="/ui/patients/{{ patient.id }}/assessments/{{ assessment.id }}"
