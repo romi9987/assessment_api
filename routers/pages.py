@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from database import get_session
 from models import AssessmentDB, PatientDB
-from schemas import PatientCreate
+from schemas import AssessmentCreate, PatientCreate
 
 router = APIRouter(prefix="/ui", tags=["ui"])
 
@@ -263,4 +263,41 @@ def list_patient_assessments(
         request=request,
         name="assessments.html",
         context={"patient": patient, "assessments": assessments}
+    )
+
+@router.get("/patients/{patient_id}/assessments/new")
+def new_assessment_form(
+    request: Request,
+    patient_id: int,
+    session: Annotated[Session, Depends(get_session)]
+):
+    patient = find_patient(session, patient_id)
+    return templates.TemplateResponse(
+        request=request,
+        name="assessment_form.html",
+        context={"patient": patient}
+    )
+
+@router.post("/patients/{patient_id}/assessments")
+def create_assessment_from_form(
+    request: Request,
+    patient_id: int,
+    session: Annotated[Session, Depends(get_session)],
+    assessment_date: Annotated[str, Form()],
+    score: Annotated[str, Form()],
+):
+    find_patient(session, patient_id)
+    assessment = AssessmentCreate(
+        assessment_date = assessment_date,
+        score = score
+    )
+    assessment_db = AssessmentDB(
+        patient_id=patient_id,
+        **assessment.model_dump()
+        )
+    session.add(assessment_db)
+    session.commit()
+    return RedirectResponse(
+        url=f"/ui/patients/{patient_id}/assessments",
+        status_code=303
     )
