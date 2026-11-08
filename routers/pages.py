@@ -28,6 +28,24 @@ def find_patient(
         )
     return patient
 
+def find_assessment(
+        session: Session,
+        patient_id: int,
+        assessment_id: int,
+) -> AssessmentDB:
+    patient = find_patient(session, patient_id)
+    statement = select(AssessmentDB).where(
+        AssessmentDB.patient_id == patient.id,
+        AssessmentDB.id == assessment_id
+    )
+    assessment = session.execute(statement).scalar_one_or_none()
+    if assessment is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Assessment of id: {assessment_id} for patient of id {patient_id} not found."
+        )
+    return assessment
+
 @router.get("/patients")
 def list_patients(
     request: Request, 
@@ -328,3 +346,14 @@ def create_assessment_from_form(
         url=f"/ui/patients/{patient_id}/assessments",
         status_code=303
     )
+
+@router.delete("/patients/{patient_id}/assessments/{assessment_id}")
+def delete_assessment_from_page(
+    patient_id: int,
+    assessment_id: int,
+    session: Annotated[Session, Depends(get_session)]
+):
+    assessment = find_assessment(session, patient_id, assessment_id)
+    session.delete(assessment)
+    session.commit()
+    return Response(status_code=200)
