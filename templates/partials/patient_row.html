@@ -4,6 +4,11 @@
     <td>{{ patient.last_name }}</td>
     <td>{{ patient.birthdate }}</td>
     <td>{{ patient.email if patient.email else "—" }}</td>
+    <td>
+        <a href="/ui/patients/{{ patient.id }}/assessments">
+            Assessments
+        </a>
+    </td>
     <td>        
         <button 
             type="button"
