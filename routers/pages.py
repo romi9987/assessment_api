@@ -293,6 +293,13 @@ def create_assessment_from_form(
             score = score
         )
     except ValidationError as exc:
+        if request.headers.get("HX-Request") == "true":
+            return templates.TemplateResponse(
+                request=request,
+                name="partials/form_errors.html",
+                context={"errors": exc.errors()},
+                status_code=422
+            )
         return templates.TemplateResponse(
             request=request,
             name="assessment_form.html",
@@ -312,6 +319,11 @@ def create_assessment_from_form(
         )
     session.add(assessment_db)
     session.commit()
+    if request.headers.get("HX-Request") == "true":
+        return HTMLResponse(
+            content="<p>Assessment created successfully!</p>",
+            status_code=200
+        )
     return RedirectResponse(
         url=f"/ui/patients/{patient_id}/assessments",
         status_code=303
