@@ -286,11 +286,26 @@ def create_assessment_from_form(
     assessment_date: Annotated[str, Form()],
     score: Annotated[str, Form()],
 ):
-    find_patient(session, patient_id)
-    assessment = AssessmentCreate(
-        assessment_date = assessment_date,
-        score = score
-    )
+    patient = find_patient(session, patient_id)
+    try:
+        assessment = AssessmentCreate(
+            assessment_date = assessment_date,
+            score = score
+        )
+    except ValidationError as exc:
+        return templates.TemplateResponse(
+            request=request,
+            name="assessment_form.html",
+            context={
+                "patient": patient,
+                "errors": exc.errors(),
+                "form_data": {
+                    "assessment_date": assessment_date,
+                    "score": score
+                }
+            },
+            status_code=422
+        )
     assessment_db = AssessmentDB(
         patient_id=patient_id,
         **assessment.model_dump()

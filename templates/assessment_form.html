@@ -9,9 +9,31 @@
     <form method="post"
         action="/ui/patients/{{ patient.id }}/assessments">
             <label for="assessment_date">Assessment date:</label>
-            <input type="date" id="assessment_date" name="assessment_date" required>
+            <input 
+                type="date" 
+                id="assessment_date" 
+                name="assessment_date"
+                value="{{ form_data.assessment_date if form_data else '' }}"
+                required
+            >
             <label for="score">Assessment score:</label>
-            <input type="number" id="score" name="score" min="0" max="100" required>
+            <input 
+                type="number" 
+                id="score" 
+                name="score" 
+                value="{{ form_data.score if form_data else '' }}"
+                min="0" 
+                max="100" 
+                required
+            >
         <button type="submit">Save assessment</button>
     </form>
+
+    {% if errors %}
+        <ul>
+            {% for error in errors %}
+                <li>{{ error.msg }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
 {% endblock %}
