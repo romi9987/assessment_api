@@ -280,7 +280,7 @@ def list_patient_assessments(
     return templates.TemplateResponse(
         request=request,
         name="assessments.html",
-        context={"patient": patient, "assessments": assessments}
+        context={"patient": patient, "patient_id": patient_id, "assessments": assessments}
     )
 
 @router.get("/patients/{patient_id}/assessments/new")
@@ -358,6 +358,23 @@ def edit_assessment_form(
     return templates.TemplateResponse(
         request=request,
         name="partials/assessment_edit_row.html",
+        context={
+            "assessment": assessment,
+            "patient_id": patient_id
+            }
+    )
+
+@router.get("/patients/{patient_id}/assessments/{assessment_id}/row")
+def get_assessment_row(
+    request: Request,
+    patient_id: int,
+    assessment_id: int,
+    session: Annotated[Session, Depends(get_session)]
+):
+    assessment = find_assessment(session, patient_id, assessment_id)
+    return templates.TemplateResponse(
+        request=request,
+        name="partials/assessment_row.html",
         context={
             "assessment": assessment,
             "patient_id": patient_id
