@@ -381,6 +381,46 @@ def get_assessment_row(
             }
     )
 
+@router.patch("/patients/{patient_id}/assessments/{assessment_id}")
+def update_assessment_from_page(
+    request: Request,
+    patient_id: int,
+    assessment_id: int,
+    session: Annotated[Session, Depends(get_session)],
+    assessment_date: Annotated[str, Form()],
+    score: Annotated[str, Form()],
+):
+    assessment = find_assessment(session, patient_id, assessment_id)
+    try:
+        assessment_data = AssessmentCreate(
+            assessment_date=assessment_date,
+            score=score,
+        )
+    except ValidationError as exc:
+        return templates.TemplateResponse(
+            request=request,
+            name="partials/assessment_edit_row.html",
+            context={
+                "assessment": assessment,
+                "patient_id": patient_id,
+                "errors": exc.errors(),
+                "form_data": {
+                                "assessment_date": assessment_date,
+                                "score": score
+                            },
+            },
+            status_code=422,
+        )
+    assessment.assessment_date = assessment_data.assessment_date
+    assessment.score = assessment_data.score
+    session.commit()
+    session.refresh(assessment)
+    return templates.TemplateResponse(
+        request=request,
+        name="partials/assessment_row.html",
+        context={"assessment": assessment, "patient_id": patient_id}
+    )
+
 @router.delete("/patients/{patient_id}/assessments/{assessment_id}")
 def delete_assessment_from_page(
     patient_id: int,
