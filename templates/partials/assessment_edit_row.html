@@ -1,0 +1,54 @@
+<tr id="assessment-{{ assessment.id }}">
+    <td>{{ assessment.id }}</td>
+
+    <td>
+        <input
+            type="date"
+            name="assessment_date"
+            value="{{ form_data.assessment_date if form_data is defined else assessment.assessment_date }}"
+            required
+            form="edit-form-{{ assessment.id }}"
+        >
+    </td>
+
+    <td>
+        <input
+            type="number"
+            name="score"
+            value="{{ form_data.score if form_data is defined else assessment.score }}"
+            min="0"
+            max="100"
+            required
+            form="edit-form-{{ assessment.id }}"
+        >
+    </td>
+
+    <td>
+        <form
+            id="edit-form-{{ assessment.id }}"
+            hx-patch="/ui/patients/{{ patient_id }}/assessments/{{ assessment.id }}"
+            hx-target="#assessment-{{ assessment.id }}"
+            hx-swap="outerHTML"
+        >
+            <button type="submit">Save assessment</button>
+        </form>
+        
+        <button 
+            type="button"
+            hx-get="/ui/patients/{{ patient_id }}/assessments/{{ assessment.id }}/row"
+            hx-target="#assessment-{{ assessment.id }}"
+            hx-swap="outerHTML"
+        >
+            Cancel
+        </button>
+
+        {% if errors is defined and errors %}
+            <ul class="validation-errors">
+                {% for error in errors %}
+                    <li>{{ error.msg }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+
+    </td>
+</tr>

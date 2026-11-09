@@ -9,8 +9,8 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from database import get_session
-from models import PatientDB
-from schemas import PatientCreate
+from models import AssessmentDB, PatientDB
+from schemas import AssessmentCreate, PatientCreate
 
 router = APIRouter(prefix="/ui", tags=["ui"])
 
@@ -27,6 +27,24 @@ def find_patient(
             detail=f"Patient of id: {patient_id} not found."
         )
     return patient
+
+def find_assessment(
+        session: Session,
+        patient_id: int,
+        assessment_id: int,
+) -> AssessmentDB:
+    patient = find_patient(session, patient_id)
+    statement = select(AssessmentDB).where(
+        AssessmentDB.patient_id == patient.id,
+        AssessmentDB.id == assessment_id
+    )
+    assessment = session.execute(statement).scalar_one_or_none()
+    if assessment is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Assessment of id: {assessment_id} for patient of id {patient_id} not found."
+        )
+    return assessment
 
 @router.get("/patients")
 def list_patients(
@@ -245,3 +263,171 @@ def delete_patient(
         status_code=200,
         headers={"HX-Trigger": "patientDeleted"},
     )
+
+@router.get("/patients/{patient_id}/assessments")
+def list_patient_assessments(
+    request: Request,
+    patient_id: int,
+    session: Annotated[Session, Depends(get_session)]
+    ):
+    patient = find_patient(session, patient_id)
+    statement = (
+        select(AssessmentDB)
+        .where(AssessmentDB.patient_id == patient_id)
+        .order_by(AssessmentDB.assessment_date.desc())
+        )
+    assessments = session.execute(statement).scalars().all()
+    return templates.TemplateResponse(
+        request=request,
+        name="assessments.html",
+        context={"patient": patient, "patient_id": patient_id, "assessments": assessments}
+    )
+
+@router.get("/patients/{patient_id}/assessments/new")
+def new_assessment_form(
+    request: Request,
+    patient_id: int,
+    session: Annotated[Session, Depends(get_session)]
+):
+    patient = find_patient(session, patient_id)
+    return templates.TemplateResponse(
+        request=request,
+        name="assessment_form.html",
+        context={"patient": patient}
+    )
+
+@router.post("/patients/{patient_id}/assessments")
+def create_assessment_from_form(
+    request: Request,
+    patient_id: int,
+    session: Annotated[Session, Depends(get_session)],
+    assessment_date: Annotated[str, Form()],
+    score: Annotated[str, Form()],
+):
+    patient = find_patient(session, patient_id)
+    try:
+        assessment = AssessmentCreate(
+            assessment_date = assessment_date,
+            score = score
+        )
+    except ValidationError as exc:
+        if request.headers.get("HX-Request") == "true":
+            return templates.TemplateResponse(
+                request=request,
+                name="partials/form_errors.html",
+                context={"errors": exc.errors()},
+                status_code=422
+            )
+        return templates.TemplateResponse(
+            request=request,
+            name="assessment_form.html",
+            context={
+                "patient": patient,
+                "errors": exc.errors(),
+                "form_data": {
+                    "assessment_date": assessment_date,
+                    "score": score
+                }
+            },
+            status_code=422
+        )
+    assessment_db = AssessmentDB(
+        patient_id=patient_id,
+        **assessment.model_dump()
+        )
+    session.add(assessment_db)
+    session.commit()
+    if request.headers.get("HX-Request") == "true":
+        return HTMLResponse(
+            content="<p>Assessment created successfully!</p>",
+            status_code=200
+        )
+    return RedirectResponse(
+        url=f"/ui/patients/{patient_id}/assessments",
+        status_code=303
+    )
+
+@router.get("/patients/{patient_id}/assessments/{assessment_id}/edit")
+def edit_assessment_form(
+    request: Request,
+    patient_id: int,
+    assessment_id: int,
+    session: Annotated[Session, Depends(get_session)]
+):
+    assessment = find_assessment(session, patient_id, assessment_id)
+    return templates.TemplateResponse(
+        request=request,
+        name="partials/assessment_edit_row.html",
+        context={
+            "assessment": assessment,
+            "patient_id": patient_id
+            }
+    )
+
+@router.get("/patients/{patient_id}/assessments/{assessment_id}/row")
+def get_assessment_row(
+    request: Request,
+    patient_id: int,
+    assessment_id: int,
+    session: Annotated[Session, Depends(get_session)]
+):
+    assessment = find_assessment(session, patient_id, assessment_id)
+    return templates.TemplateResponse(
+        request=request,
+        name="partials/assessment_row.html",
+        context={
+            "assessment": assessment,
+            "patient_id": patient_id
+            }
+    )
+
+@router.patch("/patients/{patient_id}/assessments/{assessment_id}")
+def update_assessment_from_page(
+    request: Request,
+    patient_id: int,
+    assessment_id: int,
+    session: Annotated[Session, Depends(get_session)],
+    assessment_date: Annotated[str, Form()],
+    score: Annotated[str, Form()],
+):
+    assessment = find_assessment(session, patient_id, assessment_id)
+    try:
+        assessment_data = AssessmentCreate(
+            assessment_date=assessment_date,
+            score=score,
+        )
+    except ValidationError as exc:
+        return templates.TemplateResponse(
+            request=request,
+            name="partials/assessment_edit_row.html",
+            context={
+                "assessment": assessment,
+                "patient_id": patient_id,
+                "errors": exc.errors(),
+                "form_data": {
+                                "assessment_date": assessment_date,
+                                "score": score
+                            },
+            },
+            status_code=422,
+        )
+    assessment.assessment_date = assessment_data.assessment_date
+    assessment.score = assessment_data.score
+    session.commit()
+    session.refresh(assessment)
+    return templates.TemplateResponse(
+        request=request,
+        name="partials/assessment_row.html",
+        context={"assessment": assessment, "patient_id": patient_id}
+    )
+
+@router.delete("/patients/{patient_id}/assessments/{assessment_id}")
+def delete_assessment_from_page(
+    patient_id: int,
+    assessment_id: int,
+    session: Annotated[Session, Depends(get_session)]
+):
+    assessment = find_assessment(session, patient_id, assessment_id)
+    session.delete(assessment)
+    session.commit()
+    return Response(status_code=200)

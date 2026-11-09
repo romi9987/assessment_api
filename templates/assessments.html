@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}
+    Assessments
+{% endblock %}
+
+{% block content %}
+    <h2>Assessments — {{ patient.first_name }} {{ patient.last_name }}</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Assessment Id</th>
+                <th>Assessment Date</th>
+                <th>Score</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for assessment in assessments %}
+                {% include "partials/assessment_row.html" %}
+            {% else %}
+                <tr>
+                    <td colspan="4">No assessments found.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+{% endblock %}
