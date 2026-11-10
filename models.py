@@ -10,6 +10,7 @@ class PatientDB(Base):
     __tablename__ = "patients"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     first_name: Mapped[str] = mapped_column()
     last_name: Mapped[str] = mapped_column()
     birthdate: Mapped[date] = mapped_column()
@@ -19,6 +20,7 @@ class PatientDB(Base):
         cascade="all, delete-orphan",
         passive_deletes=True
         )
+    user: Mapped["UserDB"] = relationship(back_populates="patients")
 
 # And there are actually two consequences of removing ForeignKey("patients.id"):
     # 1. SQLAlchemy won't automatically know how to join the tables. When configuring relationship(), it normally uses foreign key information to determine which columns connect the two models. Without it, you would generally get a NoForeignKeysError, unless you explicitly configure the join.
@@ -41,4 +43,12 @@ class AssessmentDB(Base):
     assessment_date: Mapped[date] = mapped_column()
     score: Mapped[int] = mapped_column()
     patient: Mapped["PatientDB"] = relationship(back_populates="assessments")
-   
+
+class UserDB(Base):
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    email: Mapped[str] = mapped_column(unique=True)
+    hashed_password: Mapped[str] = mapped_column()
+    is_active: Mapped[bool] = mapped_column(default=True)
+    patients: Mapped[list["PatientDB"]] = relationship(back_populates="user")
