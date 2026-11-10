@@ -1,12 +1,13 @@
 from fastapi import FastAPI
 
 # from database import Base, engine
-from routers import assessments, pages, patients
+from routers import assessments, auth, pages, patients
 
 app = FastAPI()
 app.include_router(patients.router)
 app.include_router(assessments.router)
 app.include_router(pages.router)
+app.include_router(auth.router)
 
 # Once you've verified the baseline with alembic, you can remove this line from main.py
 # An important consequence: when setting up your project with a new, empty database, you'll need to run alembic upgrade head before using the API.

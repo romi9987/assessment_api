@@ -70,3 +70,12 @@ class AssessmentCreate(BaseModel):
 class AssessmentResponse(AssessmentCreate):
     id: int
     patient_id: int
+
+class UserCreate(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=12)
+
+class UserResponse(BaseModel):
+    id: int
+    email: EmailStr
+    is_active: bool
