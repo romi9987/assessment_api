@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -6,9 +7,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from database import get_session
-from models import UserDB
+from models import SessionDB, UserDB
 from schemas import UserCreate, UserLogin, UserResponse
-from security import hash_password, verify_password
+from security import generate_session_token, hash_password, hash_session_token, verify_password
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -69,5 +70,15 @@ def login_user(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Invalid email or password."
         )
+    token = generate_session_token()
+    token_hash = hash_session_token(token)
+    expires_at = datetime.UTC + timedelta(hours=24)
+    session_db = SessionDB(
+        user_id = user.id,
+        token_hash = token_hash,
+        expires_at = expires_at
+    )
+    session.add(session_db)
+    session.commit()
     return {"message": "Credentials valid"}
     
