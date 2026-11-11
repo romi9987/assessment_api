@@ -1,7 +1,7 @@
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, UTC
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -9,7 +9,12 @@ from sqlalchemy.orm import Session
 from database import get_session
 from models import SessionDB, UserDB
 from schemas import UserCreate, UserLogin, UserResponse
-from security import generate_session_token, hash_password, hash_session_token, verify_password
+from security import (
+    generate_session_token,
+    hash_password,
+    hash_session_token,
+    verify_password,
+)
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -51,6 +56,7 @@ def register_user(
 @router.post("/login")
 def login_user(
     credentials: UserLogin,
+    response: Response,
     session: Annotated[Session, Depends(get_session)]
 ):
     statement = select(UserDB).where(UserDB.email == credentials.email)
@@ -72,7 +78,7 @@ def login_user(
         )
     token = generate_session_token()
     token_hash = hash_session_token(token)
-    expires_at = datetime.UTC + timedelta(hours=24)
+    expires_at = datetime.now(UTC) + timedelta(hours=24)
     session_db = SessionDB(
         user_id = user.id,
         token_hash = token_hash,
@@ -80,5 +86,17 @@ def login_user(
     )
     session.add(session_db)
     session.commit()
+
+    response.set_cookie(
+        key="session_token", # Cookie name
+        value=token, # Raw random session token
+        httponly=True, # Prevent JavaScript from reading it
+        # HttpOnly does not prevent CSRF attacks, so we'll need separate CSRF protection 
+        # before exposing authenticated patient-modifying routes.
+        secure=False, # Send only over HTTPS - must be True in production
+        samesite="lax", # Reduce some cross-site request risks
+        max_age=86400, # Expire after 24 hours
+        path="/" # Make cookie available to application routes
+    )
     return {"message": "Credentials valid"}
     
