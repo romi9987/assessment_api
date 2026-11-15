@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
@@ -7,6 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from database import get_session
+from dependencies import get_current_user
 from models import SessionDB, UserDB
 from schemas import UserCreate, UserLogin, UserResponse
 from security import (
@@ -99,4 +100,9 @@ def login_user(
         path="/" # Make cookie available to application routes
     )
     return {"message": "Credentials valid"}
-    
+
+@router.get("/me", response_model=UserResponse)
+def get_me(
+    current_user: Annotated[UserDB, Depends(get_current_user)]
+):
+    return current_user
