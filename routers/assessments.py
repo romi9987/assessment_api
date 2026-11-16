@@ -5,7 +5,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from database import get_session
-from models import AssessmentDB
+from dependencies import get_current_user
+from models import AssessmentDB, UserDB
 from schemas import AssessmentCreate, AssessmentResponse
 from utils import find_patient
 
@@ -15,8 +16,9 @@ router = APIRouter(prefix="/patients/{patient_id}/assessments", tags=["assessmen
 def create_assessment(
     patient_id: int,
     assessment_create: AssessmentCreate, 
-    session: Annotated[Session, Depends(get_session)]):
-    patient = find_patient(patient_id, session)
+    session: Annotated[Session, Depends(get_session)],
+    current_user: Annotated[UserDB, Depends(get_current_user)]):
+    patient = find_patient(session, patient_id, current_user)
     assessment_db = AssessmentDB(
         patient_id = patient.id,
         assessment_date = assessment_create.assessment_date,
@@ -30,8 +32,9 @@ def create_assessment(
 @router.get("", response_model=list[AssessmentResponse])
 def list_assessments(
     patient_id: int,
-    session: Annotated[Session, Depends(get_session)]):
-    find_patient(patient_id, session)
+    session: Annotated[Session, Depends(get_session)],
+    current_user: Annotated[UserDB, Depends(get_current_user)]):
+    find_patient(session, patient_id, current_user)
     statement = (
         select(AssessmentDB)
         .where(AssessmentDB.patient_id == patient_id)
@@ -44,8 +47,9 @@ def list_assessments(
 def get_assessment(
     patient_id: int,
     assessment_id: int,
-    session: Annotated[Session, Depends(get_session)]):
-    find_patient(patient_id, session)
+    session: Annotated[Session, Depends(get_session)],
+    current_user: Annotated[UserDB, Depends(get_current_user)]):
+    find_patient(session, patient_id, current_user)
     statement = (
         select(AssessmentDB)
         .where(AssessmentDB.patient_id == patient_id)

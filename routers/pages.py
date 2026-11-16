@@ -1,7 +1,7 @@
 from typing import Annotated
 from urllib.parse import urlencode
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, Form, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from pydantic import ValidationError
@@ -9,52 +9,25 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from database import get_session
-from models import AssessmentDB, PatientDB
+from dependencies import get_current_user
+from models import AssessmentDB, PatientDB, UserDB
 from schemas import AssessmentCreate, PatientCreate
+from utils import find_assessment, find_patient
 
 router = APIRouter(prefix="/ui", tags=["ui"])
 
 templates = Jinja2Templates(directory="templates")
 
-def find_patient(
-        session: Session,
-        patient_id: int,
-) -> PatientDB:
-    patient = session.get(PatientDB, patient_id)
-    if patient is None:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Patient of id: {patient_id} not found."
-        )
-    return patient
-
-def find_assessment(
-        session: Session,
-        patient_id: int,
-        assessment_id: int,
-) -> AssessmentDB:
-    patient = find_patient(session, patient_id)
-    statement = select(AssessmentDB).where(
-        AssessmentDB.patient_id == patient.id,
-        AssessmentDB.id == assessment_id
-    )
-    assessment = session.execute(statement).scalar_one_or_none()
-    if assessment is None:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Assessment of id: {assessment_id} for patient of id {patient_id} not found."
-        )
-    return assessment
-
 @router.get("/patients")
 def list_patients(
     request: Request, 
     session: Annotated[Session, Depends(get_session)],
+    current_user: Annotated[UserDB, Depends(get_current_user)],
     page: int = Query(default=1, ge=1),
     q: str = "",
     ):
     page_size = 5
-    statement = select(PatientDB)
+    statement = select(PatientDB).where(PatientDB.user_id == current_user.id)
     if q:
         statement = (
             statement.where(
@@ -68,7 +41,7 @@ def list_patients(
     count_statement = select(func.count()).select_from(
         statement.subquery()
     )
-    total_patients = session.scalar(count_statement)
+    total_patients = session.scalar(count_statement) or 0
     last_page = max(1, (total_patients + page_size - 1) // page_size)
     if page > last_page:
         url = f"/ui/patients?{urlencode({'page': last_page, 'q': q})}"
@@ -112,7 +85,8 @@ def list_patients(
     )
 
 @router.get("/patients/new")
-def new_patient_form(request: Request):
+def new_patient_form(request: Request,
+                    current_user: Annotated[UserDB, Depends(get_current_user)]):
     return templates.TemplateResponse(
         request=request,
         name="patient_form.html",
@@ -123,6 +97,7 @@ def new_patient_form(request: Request):
 def create_patient_from_form(
     request: Request,
     session: Annotated[Session, Depends(get_session)],
+    current_user: Annotated[UserDB, Depends(get_current_user)],
     first_name: Annotated[str, Form()],
     last_name: Annotated[str, Form()],
     birthdate: Annotated[str, Form()],
@@ -159,7 +134,8 @@ def create_patient_from_form(
             },
             status_code=422
         )
-    patient_db = PatientDB(**patient.model_dump())
+    patient_db = PatientDB(**patient.model_dump(),
+                           user_id=current_user.id)
     session.add(patient_db)
     session.commit()
     if request.headers.get("HX-Request") == "true":
@@ -183,8 +159,9 @@ def edit_patient(
     request: Request, 
     patient_id: int, 
     session: Annotated[Session, Depends(get_session)],
+    current_user: Annotated[UserDB, Depends(get_current_user)]
 ):
-    patient = find_patient(session=session, patient_id=patient_id)
+    patient = find_patient(session, patient_id, current_user)
     return templates.TemplateResponse(
         request=request,
         name="partials/patient_edit_row.html",
@@ -196,8 +173,9 @@ def cancel_edit(
     request: Request,
     patient_id: int,
     session: Annotated[Session, Depends(get_session)],
+    current_user: Annotated[UserDB, Depends(get_current_user)]
 ):
-    patient = find_patient(session=session, patient_id=patient_id)
+    patient = find_patient(session, patient_id, current_user)
     return templates.TemplateResponse(
         request=request,
         name="partials/patient_row.html",
@@ -209,12 +187,13 @@ def save_edit(
     request: Request,
     session: Annotated[Session, Depends(get_session)],
     patient_id: int,
+    current_user: Annotated[UserDB, Depends(get_current_user)],
     first_name: Annotated[str, Form()],
     last_name: Annotated[str, Form()],
     birthdate: Annotated[str, Form()],
     email: Annotated[str | None, Form()] = None,
 ):
-    patient = find_patient(session=session, patient_id=patient_id)
+    patient = find_patient(session, patient_id, current_user)
     try:
         patient_data = PatientCreate(
             first_name=first_name,
@@ -253,12 +232,12 @@ def save_edit(
 @router.delete("/patients/{patient_id}")
 def delete_patient(
     patient_id: int,
-    session: Annotated[Session, Depends(get_session)]
+    session: Annotated[Session, Depends(get_session)],
+    current_user: Annotated[UserDB, Depends(get_current_user)]
 ):
-    patient = session.get(PatientDB, patient_id)
-    if patient is not None:
-        session.delete(patient)
-        session.commit()
+    patient = find_patient(session, patient_id, current_user)
+    session.delete(patient)
+    session.commit()
     return Response(
         status_code=200,
         headers={"HX-Trigger": "patientDeleted"},
@@ -268,9 +247,10 @@ def delete_patient(
 def list_patient_assessments(
     request: Request,
     patient_id: int,
-    session: Annotated[Session, Depends(get_session)]
+    session: Annotated[Session, Depends(get_session)],
+    current_user: Annotated[UserDB, Depends(get_current_user)]
     ):
-    patient = find_patient(session, patient_id)
+    patient = find_patient(session, patient_id, current_user)
     statement = (
         select(AssessmentDB)
         .where(AssessmentDB.patient_id == patient_id)
@@ -287,9 +267,10 @@ def list_patient_assessments(
 def new_assessment_form(
     request: Request,
     patient_id: int,
-    session: Annotated[Session, Depends(get_session)]
+    session: Annotated[Session, Depends(get_session)],
+    current_user: Annotated[UserDB, Depends(get_current_user)]
 ):
-    patient = find_patient(session, patient_id)
+    patient = find_patient(session, patient_id, current_user)
     return templates.TemplateResponse(
         request=request,
         name="assessment_form.html",
@@ -301,10 +282,11 @@ def create_assessment_from_form(
     request: Request,
     patient_id: int,
     session: Annotated[Session, Depends(get_session)],
+    current_user: Annotated[UserDB, Depends(get_current_user)],
     assessment_date: Annotated[str, Form()],
     score: Annotated[str, Form()],
 ):
-    patient = find_patient(session, patient_id)
+    patient = find_patient(session, patient_id, current_user)
     try:
         assessment = AssessmentCreate(
             assessment_date = assessment_date,
@@ -352,9 +334,10 @@ def edit_assessment_form(
     request: Request,
     patient_id: int,
     assessment_id: int,
-    session: Annotated[Session, Depends(get_session)]
+    session: Annotated[Session, Depends(get_session)],
+    current_user: Annotated[UserDB, Depends(get_current_user)]
 ):
-    assessment = find_assessment(session, patient_id, assessment_id)
+    assessment = find_assessment(session, current_user, patient_id, assessment_id)
     return templates.TemplateResponse(
         request=request,
         name="partials/assessment_edit_row.html",
@@ -369,9 +352,10 @@ def get_assessment_row(
     request: Request,
     patient_id: int,
     assessment_id: int,
-    session: Annotated[Session, Depends(get_session)]
+    session: Annotated[Session, Depends(get_session)],
+    current_user: Annotated[UserDB, Depends(get_current_user)]
 ):
-    assessment = find_assessment(session, patient_id, assessment_id)
+    assessment = find_assessment(session, current_user, patient_id, assessment_id)
     return templates.TemplateResponse(
         request=request,
         name="partials/assessment_row.html",
@@ -387,10 +371,11 @@ def update_assessment_from_page(
     patient_id: int,
     assessment_id: int,
     session: Annotated[Session, Depends(get_session)],
+    current_user: Annotated[UserDB, Depends(get_current_user)],
     assessment_date: Annotated[str, Form()],
     score: Annotated[str, Form()],
 ):
-    assessment = find_assessment(session, patient_id, assessment_id)
+    assessment = find_assessment(session, current_user, patient_id, assessment_id)
     try:
         assessment_data = AssessmentCreate(
             assessment_date=assessment_date,
@@ -425,9 +410,10 @@ def update_assessment_from_page(
 def delete_assessment_from_page(
     patient_id: int,
     assessment_id: int,
-    session: Annotated[Session, Depends(get_session)]
+    session: Annotated[Session, Depends(get_session)],
+    current_user: Annotated[UserDB, Depends(get_current_user)]
 ):
-    assessment = find_assessment(session, patient_id, assessment_id)
+    assessment = find_assessment(session, current_user, patient_id, assessment_id)
     session.delete(assessment)
     session.commit()
     return Response(status_code=200)
