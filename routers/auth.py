@@ -1,7 +1,7 @@
 from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Response, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -106,3 +106,25 @@ def get_me(
     current_user: Annotated[UserDB, Depends(get_current_user)]
 ):
     return current_user
+
+@router.post("/logout")
+def logout_user(
+    response: Response,
+    session: Annotated[Session, Depends(get_session)],
+    session_token: Annotated[str | None, Cookie()] = None,
+):
+    if session_token:
+        token_hash = hash_session_token(session_token)
+        statement = select(SessionDB).where(SessionDB.token_hash == token_hash)
+        record = session.scalar(statement)
+
+        if record is not None:
+            # deleting the database record is what invalidates the session on the server
+            # and server-side invalidation is the essential security measure
+            session.delete(record)
+            session.commit()
+
+# deleting the cookie tells the browser to stop sending the token
+    response.delete_cookie(key="session_token", path="/")
+        
+    return {"message": "Logged out successfully"}
