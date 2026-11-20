@@ -1,13 +1,14 @@
+import hmac
 from datetime import UTC, datetime
 from typing import Annotated
 
-from fastapi import Cookie, Depends, HTTPException, status
+from fastapi import Cookie, Depends, Header, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from database import get_session
 from models import SessionDB, UserDB
-from security import hash_session_token
+from security import generate_csrf_token, hash_session_token
 
 
 def get_current_user(
@@ -49,3 +50,26 @@ def get_current_user(
             detail="Account is inactive."
         )
     return user_db
+
+def verify_csrf_token(
+    current_user: Annotated[UserDB, Depends(get_current_user)],
+    session_token: Annotated[str | None, Cookie()] = None,
+    csrf_token: Annotated[str | None, Header(alias="X-CSRF-Token")] = None,
+) -> None:
+    if not session_token or not csrf_token:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid or missing CSRF token."
+        )
+
+    expected_csrf_token = generate_csrf_token(session_token)
+    # We use compare_digest instead of normal comparison, because it protects against timing attacks.
+    # It is designed to avoid content-dependent timing differences when comparing values of the same type.
+    # Ordinary string comparison may stop as soon as it finds a difference. 
+    # Depending on the implementation, the comparison time can reveal information about matching characters.
+    check = hmac.compare_digest(expected_csrf_token, csrf_token)
+    if not check:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid or missing CSRF token."
+        )

@@ -35,7 +35,7 @@ def get_csrf_token(
 
     csrf_token = generate_csrf_token(session_token)
 
-# This tells browsers and intermediaries not to store the response containing the CSRF token.
+    # Prevent caching of the CSRF token response.
     response.headers["Cache-Control"] = "no-store"
 
     return {"csrf_token": csrf_token}
