@@ -11,6 +11,7 @@ from dependencies import get_current_user
 from models import SessionDB, UserDB
 from schemas import UserCreate, UserLogin, UserResponse
 from security import (
+    generate_csrf_token,
     generate_session_token,
     hash_password,
     hash_session_token,
@@ -18,6 +19,26 @@ from security import (
 )
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
+
+
+@router.get("/csrf")
+def get_csrf_token(
+    response: Response,
+    current_user: Annotated[UserDB, Depends(get_current_user)],
+    session_token: Annotated[str | None, Cookie()] = None,
+):
+    if not session_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Unauthorized."
+        )
+
+    csrf_token = generate_csrf_token(session_token)
+
+# This tells browsers and intermediaries not to store the response containing the CSRF token.
+    response.headers["Cache-Control"] = "no-store"
+
+    return {"csrf_token": csrf_token}
 
 
 @router.post(
@@ -77,24 +98,27 @@ def login_user(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Invalid email or password."
         )
-    token = generate_session_token()
-    token_hash = hash_session_token(token)
+    session_token = generate_session_token()
+    token_hash = hash_session_token(session_token)
+    csrf_token = generate_csrf_token(session_token)
+    csrf_token_hash = hash_session_token(csrf_token)
     expires_at = datetime.now(UTC) + timedelta(hours=24)
     session_db = SessionDB(
         user_id = user.id,
         token_hash = token_hash,
-        expires_at = expires_at
+        expires_at = expires_at,
+        csrf_token_hash = csrf_token_hash
     )
     session.add(session_db)
     session.commit()
 
     response.set_cookie(
         key="session_token", # Cookie name
-        value=token, # Raw random session token
+        value=session_token, # Raw random session token
         httponly=True, # Prevent JavaScript from reading it
         # HttpOnly does not prevent CSRF attacks, so we'll need separate CSRF protection 
         # before exposing authenticated patient-modifying routes.
-        secure=False, # Send only over HTTPS - must be True in production
+        secure=False, # to send only over HTTPS - must be True in production
         samesite="lax", # Reduce some cross-site request risks
         max_age=86400, # Expire after 24 hours
         path="/" # Make cookie available to application routes

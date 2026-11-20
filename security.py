@@ -1,8 +1,12 @@
 import hashlib
+import hmac
+import os
 import secrets
 
+from dotenv import load_dotenv
 from pwdlib import PasswordHash
 
+load_dotenv()
 password_hash = PasswordHash.recommended()
 
 def hash_password(password: str) -> str:
@@ -18,3 +22,17 @@ def generate_session_token() -> str:
 def hash_session_token(token: str) -> str:
     # This produces a hexadecimal SHA-256 hash of the token.
     return hashlib.sha256(token.encode()).hexdigest()
+
+def get_csrf_secret() -> str:
+    csrf_secret = os.environ.get("CSRF_SECRET")
+    if not csrf_secret:
+        raise RuntimeError("The csrf secret is empty or does not exist.")
+    return csrf_secret
+
+def generate_csrf_token(session_token: str) -> str:
+    csrf_secret = get_csrf_secret()
+    byted_csrf_secret = csrf_secret.encode()
+    byted_session_token = session_token.encode()
+    # HMAC-SHA256: Uses a secret key to authenticate data.
+    token = hmac.new(byted_csrf_secret, byted_session_token, hashlib.sha256)
+    return token.hexdigest()
