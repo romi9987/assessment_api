@@ -11,6 +11,29 @@
                 event.detail.isError = false;
             }
         });
+
+        // async function - Defines a function that can perform asynchronous operations
+        async function loadCsrfToken() {
+            // const - Declares a variable that cannot be reassigned
+            // await fetch(...) - Sends an HTTP request and waits for its response
+            const response = await fetch("/auth/csrf", {
+                // credentials: "same-origin" ensures the browser includes your session cookie for requests to your own application.
+                credentials: "same-origin",
+                // cache: "no-store" instructs the browser not to use a cached response.
+                cache: "no-store"
+            });
+
+            // if (!response.ok) - Checks whether the HTTP request failed
+            if (!response.ok) {
+                // throw new Error(...) - Raises an error, similar to Python's raise
+                throw new Error("Could not retrieve CSRF token.");
+            }
+
+            // await response.json() - Converts the JSON response into a JavaScript object
+            const data = await response.json();
+            // return data.csrf_token - Returns the CSRF token from that object
+            return data.csrf_token;
+        }
     </script>
 
     <style>
