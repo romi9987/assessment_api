@@ -34,6 +34,37 @@
             // return data.csrf_token - Returns the CSRF token from that object
             return data.csrf_token;
         }
+    
+        // csrfToken = null means we haven't received a token yet.
+        let csrfToken = null;
+
+        // loadCsrfToken() calls your FastAPI endpoint.
+        loadCsrfToken()
+            // .then(...) saves the token after a successful response.
+            .then(token => {
+                csrfToken = token;
+            })
+            // .catch(...) handles an unsuccessful token retrieval.
+            .catch(error => {
+                console.error("CSRF initialization failed:", error);
+            });
+
+        // htmx:configRequest runs before HTMX sends a request.
+        document.addEventListener("htmx:configRequest", function(event) {
+            // For POST, PUT, PATCH, and DELETE, the code attaches X-CSRF-Token.
+            const method = event.detail.verb.toUpperCase();
+
+            if (["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
+                // If no token is available, it cancels the modifying request.
+                if (!csrfToken) {
+                    event.preventDefault();
+                    alert("Your session may have expired. Please log in again.");
+                    return;
+                }
+
+                event.detail.headers["X-CSRF-Token"] = csrfToken;
+            }
+        });
     </script>
 
     <style>
