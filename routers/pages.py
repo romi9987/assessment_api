@@ -9,7 +9,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from database import get_session
-from dependencies import get_current_user
+from dependencies import get_current_user, verify_csrf_token
 from models import AssessmentDB, PatientDB, UserDB
 from schemas import AssessmentCreate, PatientCreate
 from utils import find_assessment, find_patient
@@ -93,7 +93,8 @@ def new_patient_form(request: Request,
         context={}
     )
 
-@router.post("/patients")
+@router.post("/patients",
+            dependencies=[Depends(verify_csrf_token)])
 def create_patient_from_form(
     request: Request,
     session: Annotated[Session, Depends(get_session)],
@@ -182,7 +183,8 @@ def cancel_edit(
         context={"patient": patient}
     )
 
-@router.patch("/patients/{patient_id}")
+@router.patch("/patients/{patient_id}",
+              dependencies=[Depends(verify_csrf_token)])
 def save_edit(
     request: Request,
     session: Annotated[Session, Depends(get_session)],
@@ -229,7 +231,8 @@ def save_edit(
             context={"patient": patient,}
         )
 
-@router.delete("/patients/{patient_id}")
+@router.delete("/patients/{patient_id}",
+               dependencies=[Depends(verify_csrf_token)])
 def delete_patient(
     patient_id: int,
     session: Annotated[Session, Depends(get_session)],
@@ -277,7 +280,8 @@ def new_assessment_form(
         context={"patient": patient}
     )
 
-@router.post("/patients/{patient_id}/assessments")
+@router.post("/patients/{patient_id}/assessments",
+            dependencies=[Depends(verify_csrf_token)])
 def create_assessment_from_form(
     request: Request,
     patient_id: int,
@@ -365,7 +369,8 @@ def get_assessment_row(
             }
     )
 
-@router.patch("/patients/{patient_id}/assessments/{assessment_id}")
+@router.patch("/patients/{patient_id}/assessments/{assessment_id}",
+            dependencies=[Depends(verify_csrf_token)])
 def update_assessment_from_page(
     request: Request,
     patient_id: int,
@@ -406,7 +411,8 @@ def update_assessment_from_page(
         context={"assessment": assessment, "patient_id": patient_id}
     )
 
-@router.delete("/patients/{patient_id}/assessments/{assessment_id}")
+@router.delete("/patients/{patient_id}/assessments/{assessment_id}",
+                dependencies=[Depends(verify_csrf_token)])
 def delete_assessment_from_page(
     patient_id: int,
     assessment_id: int,
