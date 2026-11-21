@@ -6,6 +6,12 @@
 
 {% block content %}
     <h2>Assessments — {{ patient.first_name }} {{ patient.last_name }}</h2>
+    
+    <p>
+        <a href="/ui/patients/{{ patient.id }}/assessments/new">
+            Create Assessment
+        </a>
+    </p>
 
     <table>
         <thead>
