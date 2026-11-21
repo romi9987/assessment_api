@@ -5,14 +5,19 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from database import get_session
-from dependencies import get_current_user
+from dependencies import get_current_user, verify_csrf_token
 from models import PatientDB, UserDB
 from schemas import PatientCreate, PatientResponse, PatientUpdate
 from utils import find_patient
 
 router = APIRouter(prefix="/patients", tags=["patients"])
 
-@router.post("", response_model=PatientResponse, status_code=201)
+@router.post(
+    "", 
+    response_model=PatientResponse, 
+    status_code=201,
+    dependencies=[Depends(verify_csrf_token)]
+)
 def create_patient(patient: PatientCreate, 
                    session: Annotated[Session, Depends(get_session)],
                    current_user: Annotated[UserDB, Depends(get_current_user)]):
@@ -42,7 +47,8 @@ def get_patient(patient_id: int,
     patient = find_patient(session, patient_id, current_user)
     return patient
 
-@router.delete("/{patient_id}")
+@router.delete("/{patient_id}",
+               dependencies=[Depends(verify_csrf_token)])
 def remove_patient(patient_id: int, 
                    session: Annotated[Session, Depends(get_session)],
                    current_user: Annotated[UserDB, Depends(get_current_user)]):
@@ -51,7 +57,11 @@ def remove_patient(patient_id: int,
     session.commit()
     return f"Patient of id {patient_id} has been removed."
 
-@router.put("/{patient_id}", response_model=PatientResponse)
+@router.put(
+    "/{patient_id}", 
+    response_model=PatientResponse,
+    dependencies=[Depends(verify_csrf_token)]
+)
 def replace_patient(patient_id: int, 
                    patient_create: PatientCreate, 
                    session: Annotated[Session, Depends(get_session)],
@@ -65,7 +75,11 @@ def replace_patient(patient_id: int,
     session.refresh(patient)
     return patient
 
-@router.patch("/{patient_id}", response_model=PatientResponse)
+@router.patch(
+    "/{patient_id}", 
+    response_model=PatientResponse,
+    dependencies=[Depends(verify_csrf_token)]
+)
 def update_patient(patient_id: int,
                  patient_update: PatientUpdate,
                  session: Annotated[Session, Depends(get_session)],

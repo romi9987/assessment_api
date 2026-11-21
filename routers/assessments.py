@@ -5,14 +5,19 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from database import get_session
-from dependencies import get_current_user
+from dependencies import get_current_user, verify_csrf_token
 from models import AssessmentDB, UserDB
 from schemas import AssessmentCreate, AssessmentResponse
 from utils import find_patient
 
 router = APIRouter(prefix="/patients/{patient_id}/assessments", tags=["assessments"])
 
-@router.post("", response_model=AssessmentResponse, status_code=201)
+@router.post(
+    "", 
+    response_model=AssessmentResponse, 
+    status_code=201, 
+    dependencies=[Depends(verify_csrf_token)]
+)
 def create_assessment(
     patient_id: int,
     assessment_create: AssessmentCreate, 
