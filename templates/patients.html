@@ -22,12 +22,7 @@
         Searching...
     </span>
 
-    <div 
-        id="patients-content"
-        hx-get="/ui/patients?page=1"
-        hx-target="#patients-content"
-        hx-swap="innerHTML"
-    >
+    <div id="patients-content">
         {% include "partials/patients_content.html" %}
     </div>
 
