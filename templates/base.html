@@ -38,16 +38,18 @@
         // csrfToken = null means we haven't received a token yet.
         let csrfToken = null;
 
-        // loadCsrfToken() calls your FastAPI endpoint.
-        loadCsrfToken()
-            // .then(...) saves the token after a successful response.
-            .then(token => {
-                csrfToken = token;
-            })
-            // .catch(...) handles an unsuccessful token retrieval.
-            .catch(error => {
-                console.error("CSRF initialization failed:", error);
-            });
+        if (window.location.pathname !== "/ui/login") {
+            // loadCsrfToken() calls your FastAPI endpoint.
+            loadCsrfToken()
+                // .then(...) saves the token after a successful response.
+                .then(token => {
+                    csrfToken = token;
+                })
+                // .catch(...) handles an unsuccessful token retrieval.
+                .catch(error => {
+                    console.error("CSRF initialization failed:", error);
+                });
+        }
 
         // htmx:configRequest runs before HTMX sends a request.
         document.addEventListener("htmx:configRequest", function(event) {
@@ -81,11 +83,15 @@
 <body>
     <h1>Patient Assessment</h1>
     <nav>
-        <button type="button" hx-post="/auth/logout" hx-swap="none">
-            Logout
-        </button>
-        <a href="/ui/patients/new">Add patient</a>
-        <a href="/ui/patients">Patients</a>
+        {% if request.url.path == "/ui/login" %}
+            <a href="/ui/login">Login</a>
+        {% else %}
+            <button type="button" hx-post="/auth/logout" hx-swap="none">
+                Logout
+            </button>
+            <a href="/ui/patients/new">Add patient</a>
+            <a href="/ui/patients">Patients</a>
+        {% endif %}
     </nav>
 
     {% block content %}

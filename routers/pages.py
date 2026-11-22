@@ -18,6 +18,14 @@ router = APIRouter(prefix="/ui", tags=["ui"])
 
 templates = Jinja2Templates(directory="templates")
 
+@router.get("/login")
+def login_page(request: Request):
+    return templates.TemplateResponse(
+        request=request,
+        name="login.html",
+        context={}
+    )
+
 @router.get("/patients")
 def list_patients(
     request: Request, 
