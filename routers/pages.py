@@ -36,7 +36,8 @@ def login_page(request: Request):
         context={}
     )
 
-@router.get("/admin/users")
+@router.get("/admin/users",
+            dependencies=[Depends(require_admin)])
 def pending_users_page(
     request: Request,
     session: Annotated[Session, Depends(get_session)]
