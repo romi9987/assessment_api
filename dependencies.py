@@ -2,7 +2,7 @@ import hmac
 from datetime import UTC, datetime
 from typing import Annotated
 
-from fastapi import Cookie, Depends, Header, HTTPException, status
+from fastapi import Cookie, Depends, Header, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -12,6 +12,7 @@ from security import generate_csrf_token, hash_session_token
 
 
 def get_current_user(
+    request: Request,
     session: Annotated[Session, Depends(get_session)],
     session_token: Annotated[str | None, Cookie()] = None,
 ) -> UserDB:
@@ -49,6 +50,8 @@ def get_current_user(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Account is inactive."
         )
+    # request.state allows you to attach information to the current HTTP request.
+    request.state.current_user = user_db
     return user_db
 
 def require_admin(
