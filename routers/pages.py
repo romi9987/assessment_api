@@ -16,7 +16,17 @@ from utils import find_assessment, find_patient
 
 router = APIRouter(prefix="/ui", tags=["ui"])
 
-templates = Jinja2Templates(directory="templates")
+# A context processor automatically adds variables to the context of every template 
+# rendered by a particular Jinja2Templates instance. In this case current_user.
+def auth_template_context(request: Request) -> dict:
+    return {
+        "current_user": getattr(request.state, "current_user", None)
+    }
+
+templates = Jinja2Templates(
+    directory="templates",
+    context_processors=[auth_template_context]
+    )
 
 @router.get("/login")
 def login_page(request: Request):
@@ -29,15 +39,14 @@ def login_page(request: Request):
 @router.get("/admin/users")
 def pending_users_page(
     request: Request,
-    session: Annotated[Session, Depends(get_session)],
-    current_user: Annotated[UserDB, Depends(require_admin)]
+    session: Annotated[Session, Depends(get_session)]
 ):
     statement = select(UserDB).where(UserDB.is_active.is_(False))
     users = session.scalars(statement).all()
     return templates.TemplateResponse(
             request=request,
             name="pending_users.html",
-            context={"users": users, "current_user": current_user,}
+            context={"users": users}
         )
 
 @router.get("/patients")
