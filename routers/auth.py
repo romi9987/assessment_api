@@ -7,7 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from database import get_session
-from dependencies import get_current_user, verify_csrf_token
+from dependencies import get_current_user, require_admin, verify_csrf_token
 from models import SessionDB, UserDB
 from schemas import UserCreate, UserLogin, UserResponse
 from security import (
@@ -39,7 +39,6 @@ def get_csrf_token(
     response.headers["Cache-Control"] = "no-store"
 
     return {"csrf_token": csrf_token}
-
 
 @router.post(
     "/register",
@@ -76,6 +75,38 @@ def register_user(
     session.refresh(user_db)
 
     return user_db
+
+@router.get(
+        "/admin/users/pending", 
+        dependencies = [Depends(require_admin)], 
+        response_model=list[UserResponse]
+        )
+def list_inactive_users(session: Annotated[Session, Depends(get_session)]):
+    statement = select(UserDB).where(UserDB.is_active.is_(False))
+    users = session.execute(statement).scalars().all()
+    return users
+
+@router.patch("/admin/users/{user_id}/approve",
+              dependencies=[
+                Depends(require_admin),
+                Depends(verify_csrf_token)
+            ])
+def approve_user(user_id: int,
+                 session: Annotated[Session, Depends(get_session)]):
+    user = session.get(UserDB, user_id)
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"User of id {user_id} not found."
+        )
+    if user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"User of id {user_id} is already active."
+        )
+    user.is_active = True
+    session.commit()
+    return {"message": f"User of id {user_id} is active."}
 
 @router.post("/login")
 def login_user(
