@@ -151,5 +151,6 @@ def logout_user(
 
     # deleting the cookie tells the browser to stop sending the token
     response.delete_cookie(key="session_token", path="/")
+    response.headers["HX-Redirect"] = "/ui/login"
         
     return {"message": "Logged out successfully"}
