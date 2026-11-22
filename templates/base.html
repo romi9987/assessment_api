@@ -81,6 +81,9 @@
 <body>
     <h1>Patient Assessment</h1>
     <nav>
+        <button type="button" hx-post="/auth/logout" hx-swap="none">
+            Logout
+        </button>
         <a href="/ui/patients/new">Add patient</a>
         <a href="/ui/patients">Patients</a>
     </nav>
