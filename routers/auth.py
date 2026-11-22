@@ -7,7 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from database import get_session
-from dependencies import get_current_user
+from dependencies import get_current_user, verify_csrf_token
 from models import SessionDB, UserDB
 from schemas import UserCreate, UserLogin, UserResponse
 from security import (
@@ -131,7 +131,8 @@ def get_me(
 ):
     return current_user
 
-@router.post("/logout")
+@router.post("/logout",
+            dependencies=[Depends(verify_csrf_token)])
 def logout_user(
     response: Response,
     session: Annotated[Session, Depends(get_session)],
@@ -148,7 +149,7 @@ def logout_user(
             session.delete(record)
             session.commit()
 
-# deleting the cookie tells the browser to stop sending the token
+    # deleting the cookie tells the browser to stop sending the token
     response.delete_cookie(key="session_token", path="/")
         
     return {"message": "Logged out successfully"}
