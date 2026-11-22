@@ -50,6 +50,27 @@ def pending_users_page(
             context={"users": users}
         )
 
+# This returns only the table HTML
+@router.get(
+    "/admin/users/table",
+    dependencies=[Depends(require_admin)]
+    )
+def pending_users_table(
+    request: Request,
+    session: Annotated[Session, Depends(get_session)]
+):
+    statement = select(UserDB).where(
+        UserDB.is_active.is_(False)
+    )
+
+    users = session.scalars(statement).all()
+
+    return templates.TemplateResponse(
+        request=request,
+        name="partials/pending_users_table.html",
+        context={"users": users}
+    )
+
 @router.get("/patients")
 def list_patients(
     request: Request, 
