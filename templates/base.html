@@ -91,6 +91,9 @@
             </button>
             <a href="/ui/patients/new">Add patient</a>
             <a href="/ui/patients">Patients</a>
+            {% if current_user is defined and current_user.is_admin %}
+                <a href="/ui/admin/users">Admin</a>
+            {% endif %}
         {% endif %}
     </nav>
 
