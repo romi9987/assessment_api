@@ -51,6 +51,17 @@ def get_current_user(
         )
     return user_db
 
+def require_admin(
+    current_user: Annotated[UserDB, Depends(get_current_user)]
+) -> UserDB:
+    if not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Administrator access required."
+        )
+
+    return current_user
+
 def verify_csrf_token(
     current_user: Annotated[UserDB, Depends(get_current_user)],
     session_token: Annotated[str | None, Cookie()] = None,
