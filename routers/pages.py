@@ -9,7 +9,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from database import get_session
-from dependencies import get_current_user, verify_csrf_token
+from dependencies import get_current_user, require_admin, verify_csrf_token
 from models import AssessmentDB, PatientDB, UserDB
 from schemas import AssessmentCreate, PatientCreate
 from utils import find_assessment, find_patient
@@ -25,6 +25,20 @@ def login_page(request: Request):
         name="login.html",
         context={}
     )
+
+@router.get("/admin/users")
+def pending_users_page(
+    request: Request,
+    session: Annotated[Session, Depends(get_session)],
+    current_user: Annotated[UserDB, Depends(require_admin)]
+):
+    statement = select(UserDB).where(UserDB.is_active.is_(False))
+    users = session.scalars(statement).all()
+    return templates.TemplateResponse(
+            request=request,
+            name="pending_users.html",
+            context={"users": users, "current_user": current_user,}
+        )
 
 @router.get("/patients")
 def list_patients(
