@@ -1,6 +1,7 @@
 from datetime import date, datetime
 
-from sqlalchemy import DateTime, ForeignKey, String
+import sqlalchemy as sa
+from sqlalchemy import Boolean, DateTime, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database import Base
@@ -50,7 +51,17 @@ class UserDB(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     email: Mapped[str] = mapped_column(unique=True)
     hashed_password: Mapped[str] = mapped_column()
-    is_active: Mapped[bool] = mapped_column(default=True)
+    is_active: Mapped[bool] = mapped_column(
+        Boolean,
+        # default=False	SQLAlchemy supplies False when no value is provided
+        # Without a default or a separate backfill step, adding a NOT NULL column to a populated table would fail.
+        default=False,
+        # server_default=sa.false()	PostgreSQL supplies False when an INSERT omits the column
+        server_default=sa.false,
+        # nullable=False	PostgreSQL rejects NULL values
+        nullable=False
+    )
+    is_admin: Mapped[bool] = mapped_column(Boolean, default=False, server_default=sa.false, nullable=False)
     patients: Mapped[list["PatientDB"]] = relationship(back_populates="user")
     sessions: Mapped[list["SessionDB"]] = relationship(back_populates="user", passive_deletes=True)
 

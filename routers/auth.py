@@ -60,7 +60,9 @@ def register_user(
 
     user_db = UserDB(
         email = user.email,
-        hashed_password = hash_password(user.password)
+        hashed_password = hash_password(user.password),
+        is_active = False,
+        is_admin = False
     )
     session.add(user_db)
     try:
