@@ -92,7 +92,8 @@ def list_inactive_users(session: Annotated[Session, Depends(get_session)]):
                 Depends(verify_csrf_token)
             ])
 def approve_user(user_id: int,
-                 session: Annotated[Session, Depends(get_session)]):
+                 session: Annotated[Session, Depends(get_session)],
+                 response: Response):
     user = session.get(UserDB, user_id)
     if user is None:
         raise HTTPException(
@@ -106,6 +107,9 @@ def approve_user(user_id: int,
         )
     user.is_active = True
     session.commit()
+
+    response.headers["HX-Trigger"] = "userApproved"
+
     return {"message": f"User of id {user_id} is active."}
 
 @router.post("/login")
