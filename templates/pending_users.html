@@ -3,38 +3,14 @@
 {% block content %}
 <h2>Pending User Registrations</h2>
 
-<table>
-    <thead>
-        <tr>
-            <th>ID</th>
-            <th>Email</th>
-            <th>Action</th>
-        </tr>
-    </thead>
+<!--hx-trigger attribute listens for a custom event called userApproved-->
+<div
+    id="pending-users-container"
+    hx-get="/ui/admin/users/table"
+    hx-trigger="userApproved from:body"
+    hx-swap="innerHTML"
+>
+    {% include "partials/pending_users_table.html" %}
+</div>
 
-    <tbody id="pending-users">
-        {% for user in users %}
-        <tr id="user-{{ user.id }}">
-            <td>{{ user.id }}</td>
-            <td>{{ user.email }}</td>
-            <td>
-                <!--hx-patch sends a PATCH request to your existing approval endpoint.-->
-                <!--hx-target="closest tr" identifies the table row containing the button.-->
-                <!--hx-swap="delete" removes that row from the page after a successful response.-->
-                <button
-                    hx-patch="/auth/admin/users/{{ user.id }}/approve"
-                    hx-target="closest tr"
-                    hx-swap="delete"
-                >
-                    Approve
-                </button>
-            </td>
-        </tr>
-        {% else %}
-        <tr>
-            <td colspan="3">No pending registrations.</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
 {% endblock %}

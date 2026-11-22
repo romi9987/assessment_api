@@ -1,0 +1,32 @@
+{% if users %}
+<table>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Email</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for user in users %}
+        <tr id="user-{{ user.id }}">
+            <td>{{ user.id }}</td>
+            <td>{{ user.email }}</td>
+            <td>
+                <!--hx-patch sends a PATCH request to your existing approval endpoint.-->
+                <!--hx-target="closest tr" identifies the table row containing the button.-->
+                <!--hx-swap="delete" removes that row from the page after a successful response.-->
+                <button
+                    hx-patch="/auth/admin/users/{{ user.id }}/approve"
+                    hx-swap="none"
+                >
+                    Approve
+                </button>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p>No pending registrations.</p>
+{% endif %}
